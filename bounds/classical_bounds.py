@@ -15,14 +15,23 @@ def bisection_binomial_tail_inversion(k, n, delta):
       high = t
     else:
       low = t
-  return high
+
+  if np.abs(binom.logcdf(k, n, high) - delta) < 1e-5:
+    return high
+  else:
+    return 1
 
 def brute_force_binomial_tail_inversion(k, n, delta, precision=1e-06):
   linspace = np.arange(0,1+precision, precision)
   cdf = binom.logcdf(k, n, linspace)
   diff = cdf - delta
   diff[diff < 0] = 1
-  return linspace[np.argmin(diff)]
+  p = linspace[np.argmin(diff)]
+
+  if np.abs(binom.logcdf(k, n, p) - delta) < 1e-2:
+    return p
+  else:
+    return 1
 
 def beta_ppf(k, n, delta):
   ppf = beta.ppf(1-delta, k+1, n-k)
