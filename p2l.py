@@ -20,7 +20,7 @@ def p2l_algorithm():
 
     model = create_model(wandb.config)
     
-    STOP = -torch.log(torch.tensor(0.5))
+    STOP = torch.log(torch.tensor(wandb.config['n_classes']))
     batch_size = wandb.config['batch_size'] 
     n_sigma = 1
 
