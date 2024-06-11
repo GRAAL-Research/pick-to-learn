@@ -32,7 +32,6 @@ def p2l_algorithm():
         prior_trainer.fit(model=model, train_dataloaders=prior_loader)
 
     information_dict = {}
-    information_dict['config'] = dict(wandb.config)
     information_dict['train_set_size'] = len(train_set)
     information_dict['test_set_size'] = len(test_set)
 
@@ -122,6 +121,8 @@ def p2l_algorithm():
 
     wandb.log(information_dict)
 
+    information_dict['config'] = dict(wandb.config)
+    
     if not os.path.isdir("./experiment_logs"):
         os.mkdir("./experiment_logs")
 
