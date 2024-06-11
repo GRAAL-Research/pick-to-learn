@@ -140,9 +140,9 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--second_class', type=int, default=7, help="When the problem is binary classification, the second class used in the training set.")
 
     # pretraining details
-    parser.add_argument('-p', '--prior_size', type=float, default=0.01, help="Portion of the training set that is used to pre-train the model.")
-    parser.add_argument('-pti', '--pretraining_epochs', type=int, default=100, help="Number of epochs used to pretrain the model.")
-    parser.add_argument('-plr', '--pretraining_lr', type=int, default=100, help="Learning rate used by the optimizer to pretrain the model.")
+    parser.add_argument('-p', '--prior_size', type=float, default=0.5, help="Portion of the training set that is used to pre-train the model.")
+    parser.add_argument('-pti', '--pretraining_epochs', type=int, default=50, help="Number of epochs used to pretrain the model.")
+    parser.add_argument('-plr', '--pretraining_lr', type=float, default=1e-3, help="Learning rate used by the optimizer to pretrain the model.")
 
     # training details
     parser.add_argument('-m', '--model_type', type=str, default="cnn", help="Type of model to train.")
@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
     # optimizer
     parser.add_argument('-o', '--optimizer', type=str, default="Adam", help="Optimizer used to train the model.")
-    parser.add_argument('-lr', '--learning_rate', type=float, default=1e-2, help="Learning rate used to train the model.")
+    parser.add_argument('-lr', '--learning_rate', type=float, default=1e-4, help="Learning rate used to train the model.")
     parser.add_argument('-mm', '--momentum', type=float, default=0.95, help="Momentum used by the SGD optimizer. This parameter is not used by Adam.")
 
     # p2l params
