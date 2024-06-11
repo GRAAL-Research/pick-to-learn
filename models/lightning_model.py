@@ -29,9 +29,7 @@ class ClassificationModel(L.LightningModule):
         x, y = batch
         y_hat = self.layers(x)
         loss =  nn.CrossEntropyLoss(reduction='none')(y_hat, y)
-        max_val = loss.max()
-        argmax_val = batch_idx * self.batch_size + loss.argmax()
-        return max_val, argmax_val
+        return loss
     
     def validation_step(self, batch, batch_idx):
         x, y = batch

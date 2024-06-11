@@ -25,4 +25,4 @@ def log_binomial_coefficient(n, k):
             log_stirlings_approximation(n - k))
 
 def zeta(x):
-    return (6 / np.pi**2) * (x + 1)**-2
+    return (6 / (np.pi * (x + 1) )**2)
