@@ -5,19 +5,19 @@ from torchmetrics.classification import MulticlassAccuracy
 
 
 class ClassificationModel(L.LightningModule):
-    def __init__(self, layers, optimizer="Adam", lr=1e-3, momentum=0.95, batch_size=64):
+    def __init__(self, model, optimizer="Adam", lr=1e-3, momentum=0.95, batch_size=64):
         super().__init__()
         self.optimizer = optimizer
         self.lr = lr
         self.momentum = momentum
         self.batch_size = batch_size
-        self.layers = layers
+        self.model = model
         self.loss = nn.CrossEntropyLoss()
-        self.metric = MulticlassAccuracy(num_classes=self.layers.n_classes).to(self.device)
+        self.metric = MulticlassAccuracy(num_classes=self.model.n_classes).to(self.device)
 
     def training_step(self, batch, batch_idx):
         x, y = batch
-        y_hat = self.layers(x)
+        y_hat = self.model(x)
         train_acc = self.metric(torch.argmax(y_hat, dim=1), y)
         self.log("train_acc", train_acc, prog_bar=True)
 
@@ -27,13 +27,13 @@ class ClassificationModel(L.LightningModule):
     
     def predict_step(self, batch, batch_idx):
         x, y = batch
-        y_hat = self.layers(x)
+        y_hat = self.model(x)
         loss =  nn.CrossEntropyLoss(reduction='none')(y_hat, y)
         return loss
     
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        y_hat = self.layers(x)
+        y_hat = self.model(x)
         validation_loss = self.loss(y_hat, y)
         self.log("validation_loss", validation_loss)
         validation_acc = self.metric(torch.argmax(y_hat, dim=1), y)
@@ -44,7 +44,7 @@ class ClassificationModel(L.LightningModule):
 
     def test_step(self, batch, batch_idx):
         x, y = batch
-        y_hat = self.layers(x)
+        y_hat = self.model(x)
         test_loss = self.loss(y_hat, y)
         self.log("test_loss", test_loss)
         test_acc = self.metric(torch.argmax(y_hat, dim=1), y)

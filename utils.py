@@ -1,8 +1,8 @@
 import torch
 from PIL import Image
 from torchvision.transforms import ToTensor
-from models.linear_model import MnistMlp
-from models.convolutional_model import MnistCnn, Cifar10Cnn9l
+from models.linear_network import MnistMlp
+from models.convolutional_network import MnistCnn, Cifar10Cnn9l
 from models.lightning_model import ClassificationModel
 import numpy as np
 
@@ -44,16 +44,16 @@ class CompressionSetIndexes(torch.Tensor):
         super().__init__()
         self.validation_set = torch.ones(n, dtype=torch.bool) # True if the data is in the validation set
 
-    def get_validation_set_length(self):
-        return self.validation_set.sum()
+    def get_validation_size(self):
+        return int(self.validation_set.sum())
     
-    def get_compression_set_length(self):
-        return self.validation_set.shape[0] - self.get_validation_set_length()
+    def get_compression_size(self):
+        return int(self.validation_set.shape[0] - self.get_validation_size())
     
-    def get_validation_set(self):
+    def get_validation_data(self):
         return self.validation_set
     
-    def get_compression_set(self):
+    def get_compression_data(self):
         return ~self.validation_set
     
     def update_compression_set(self, indices) -> None:
@@ -65,12 +65,15 @@ class CompressionSetIndexes(torch.Tensor):
 
 def get_max_error_idx(errors, k):
     error_tensor = torch.cat(errors)
+    # on gère le cas où il reste moins de k données dans le jeu de données.
+    if error_tensor.shape[0] < k:
+        k = error_tensor.shape[0]
     values, indices = torch.topk(error_tensor, k)
     return values.max(), indices
 
 def create_model(config):
     if config['prior_size'] == 0.0:
-        lr = config['learning_rate']
+        lr = config['training_lr']
     else:
         lr = config['pretraining_lr']
 

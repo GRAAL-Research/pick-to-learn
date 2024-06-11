@@ -1,7 +1,7 @@
 import torch
 from lightning.pytorch import seed_everything
 from dataset.mnist import load_binary_mnist
-from models.linear_model import Mlp
+from models.linear_network import Mlp
 import lightning as L
 
 #
