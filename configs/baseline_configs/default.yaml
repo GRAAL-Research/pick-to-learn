@@ -1,0 +1,24 @@
+name: baseline_sweep
+method: grid
+metric:
+  goal: minimize
+  name: validation_loss
+  
+parameters:
+  # training details
+  model_type:
+    value : "mlp"
+  dropout_probability:
+    values: [0.1, 0.2]
+  patience:
+    values: [3]
+
+  # optimizer
+  optimizer:
+    values: ["Adam"]
+  training_lr:
+    values: [1e-3, 1e-4]
+  momentum:
+    value: 0.95
+  nesterov:
+    value: True

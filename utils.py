@@ -73,7 +73,8 @@ def get_max_error_idx(errors, k):
     return values.max(), indices
 
 def create_model(config):
-    if config['prior_size'] == 0.0:
+
+    if config.get('prior_size', 0.0) == 0.0:
         lr = config['training_lr']
     else:
         lr = config['pretraining_lr']
@@ -128,3 +129,11 @@ def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : f
     assert len(prior_set) + len(train_set) + len(validation_set) == len(dataset)
 
     return prior_set, train_set, validation_set
+
+def split_train_validation_dataset(dataset : CustomDataset, validation_size : float):
+    train_data, val_data = torch.utils.data.random_split(dataset, [1-validation_size, validation_size])
+    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices)
+    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices)
+
+    assert len(train_set) + len(validation_set) == len(dataset)
+    return train_set, validation_set

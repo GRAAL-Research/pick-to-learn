@@ -1,7 +1,7 @@
 import torch
 from lightning.pytorch import seed_everything
 import lightning as L
-from utils import get_max_error_idx, CustomDataset, create_model, split_prior_train_validation_dataset, CompressionSetIndexes, update_learning_rate
+from utils import *
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from bounds.p2l_bounds import compute_all_p2l_bounds
 from bounds.real_valued_bounds import compute_real_valued_bounds
@@ -25,13 +25,15 @@ def p2l_algorithm():
     # create models, load dataset and split it if necessary
     model = create_model(wandb.config)
     train_set, test_set = load_dataset(wandb.config)
-    prior_set, train_set, validation_set = split_prior_train_validation_dataset(train_set, wandb.config['prior_size'], wandb.config['validation_size'])
 
     # if there is pretraining, train the model on the prior set.
     if wandb.config['prior_size'] != 0.0:
+        prior_set, train_set, validation_set = split_prior_train_validation_dataset(train_set, wandb.config['prior_size'], wandb.config['validation_size'])
         prior_loader= torch.utils.data.DataLoader(prior_set, batch_size=batch_size, shuffle=False,  num_workers=5, persistent_workers=True)
         prior_trainer = L.Trainer(max_epochs=wandb.config['pretraining_epochs'])
         prior_trainer.fit(model=model, train_dataloaders=prior_loader)
+    else:
+        train_set, validation_set = split_train_validation_dataset(train_set, wandb.config['validation_size'])
 
     # Instantiate the mask that will deal with the indexes
     dataset_idx = CompressionSetIndexes(len(train_set))
@@ -101,7 +103,7 @@ def p2l_algorithm():
 
     # Test the model on the complement set
     complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data())
-    complement_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
+    complement_loader = torch.utils.data.DataLoader(complement_set, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
     complement_results = prediction_trainer.validate(model, dataloaders=complement_loader)
 
     # Test the model on the validation and test sets
@@ -110,6 +112,7 @@ def p2l_algorithm():
 
     # log informations
     information_dict['train_set_size'] = len(train_set)
+    information_dict['validation_set_size'] = len(validation_set)
     information_dict['test_set_size'] = len(test_set)
     information_dict['compression_set_size'] = compression_set_size
 
