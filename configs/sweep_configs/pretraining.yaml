@@ -1,0 +1,38 @@
+name: sweep
+method: grid
+metric:
+  goal: minimize
+  name: validation_loss
+  
+parameters:
+  # pretraining details
+  prior_size:
+    value: 0.1
+  pretraining_epochs:
+    values: [50, 100]
+  pretraining_lr:
+    values: [1e-2, 1e-3]
+
+  # training details
+  model_type:
+    values : ["cnn"]
+  dropout_probability:
+    values: [0.2]
+
+  # optimizer
+  optimizer:
+    values: ["Adam"]
+  training_lr:
+    values: [1e-3, 1e-4]
+  momentum:
+    value: 0.95
+  nesterov:
+    value: True
+
+  # p2l params
+  max_compression_size:
+    value: -1
+  data_groupsize: 
+    values: [1]
+  patience:
+    values: [3]

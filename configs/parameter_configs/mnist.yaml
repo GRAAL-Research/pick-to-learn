@@ -1,0 +1,18 @@
+dataset: "mnist"
+n_classes: 2
+first_class: 1
+second_class: 7
+validation_size: 0.1
+max_epochs: 200
+batch_size: 64
+
+# bound parameters
+delta: 0.01
+nbr_parameter_bounds: 20
+classic_bounds: True
+p2l_bounds: True
+real_bounds: True
+
+# miscellaneous
+log_iterations: 100
+deterministic: True

@@ -180,7 +180,7 @@ if __name__ == "__main__":
     parser.add_argument('--nesterov', action='store_false', help="If the SGD optimizer should use Nesterov acceleration.")
 
     # p2l params
-    parser.add_argument('-mx', '--max_compression_size', type=int, default=2,
+    parser.add_argument('-mx', '--max_compression_size', type=int, default=-1,
                      help="Maximum size of the compression set added by the P2L algorithm. -1 if everything can be added")
     parser.add_argument('-dg', '--data_groupsize', type=int, default=1, help="Number of data added to the compression set at each iterations.")
     parser.add_argument('-pt', '--patience', type=int, default=3, help="Patience of the EarlyStopping Callback used to train on the compression set.")
