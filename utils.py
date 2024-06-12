@@ -1,5 +1,6 @@
 import torch
 from PIL import Image
+import torch.utils
 from torchvision.transforms import ToTensor
 from models.linear_network import MnistMlp
 from models.convolutional_network import MnistCnn, Cifar10Cnn9l
@@ -42,25 +43,25 @@ class CustomDataset(torch.utils.data.Dataset):
 class CompressionSetIndexes(torch.Tensor):
     def __init__(self, n:int ):
         super().__init__()
-        self.validation_set = torch.ones(n, dtype=torch.bool) # True if the data is in the validation set
+        self.complement_set = torch.ones(n, dtype=torch.bool) # True if the data is in the validation set
 
-    def get_validation_size(self):
-        return int(self.validation_set.sum())
+    def get_complement_size(self):
+        return int(self.complement_set.sum())
     
     def get_compression_size(self):
-        return int(self.validation_set.shape[0] - self.get_validation_size())
+        return int(self.complement_set.shape[0] - self.get_complement_size())
     
-    def get_validation_data(self):
-        return self.validation_set
+    def get_complement_data(self):
+        return self.complement_set
     
     def get_compression_data(self):
-        return ~self.validation_set
+        return ~self.complement_set
     
     def update_compression_set(self, indices) -> None:
-        self.validation_set[indices] = False
+        self.complement_set[indices] = False
 
     def correct_idx(self,indices):
-        return self.validation_set.nonzero()[indices]
+        return self.complement_set.nonzero()[indices]
 
 
 def get_max_error_idx(errors, k):
@@ -109,14 +110,21 @@ def create_model(config):
 def update_learning_rate(model, lr) -> None:
     model.lr = lr
 
-def split_prior_train_dataset(dataset, prior_size):
+def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : float, validation_size : float):
     if prior_size == 0.0:
-        return None, CustomDataset(dataset.data, dataset.targets)
+        train_data, val_data = torch.utils.data.random_split(dataset, [1-validation_size, validation_size])
+        train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices)
+        validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices)
+
+        assert len(train_set) + len(validation_set) == len(dataset)
+        return None, train_set, validation_set
     
-    prior_data, train_data = torch.utils.data.random_split(dataset, [prior_size, 1-prior_size])
+    splits = [prior_size, 1-prior_size - validation_size, validation_size]
+    prior_data, train_data, val_data = torch.utils.data.random_split(dataset, splits)
     prior_set = CustomDataset(dataset.data, dataset.targets, indices=prior_data.indices)
     train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices)
+    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices)
     
-    assert len(prior_set) + len(train_set) == len(dataset)
+    assert len(prior_set) + len(train_set) + len(validation_set) == len(dataset)
 
-    return prior_set, train_set
+    return prior_set, train_set, validation_set

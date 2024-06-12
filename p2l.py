@@ -1,7 +1,7 @@
 import torch
 from lightning.pytorch import seed_everything
 import lightning as L
-from utils import get_max_error_idx, CustomDataset, create_model, split_prior_train_dataset, CompressionSetIndexes, update_learning_rate
+from utils import get_max_error_idx, CustomDataset, create_model, split_prior_train_validation_dataset, CompressionSetIndexes, update_learning_rate
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from bounds.p2l_bounds import compute_all_p2l_bounds
 from bounds.real_valued_bounds import compute_real_valued_bounds
@@ -25,7 +25,7 @@ def p2l_algorithm():
     # create models, load dataset and split it if necessary
     model = create_model(wandb.config)
     train_set, test_set = load_dataset(wandb.config)
-    prior_set, train_set = split_prior_train_dataset(train_set, wandb.config['prior_size'])
+    prior_set, train_set, validation_set = split_prior_train_validation_dataset(train_set, wandb.config['prior_size'], wandb.config['validation_size'])
 
     # if there is pretraining, train the model on the prior set.
     if wandb.config['prior_size'] != 0.0:
@@ -36,10 +36,14 @@ def p2l_algorithm():
     # Instantiate the mask that will deal with the indexes
     dataset_idx = CompressionSetIndexes(len(train_set))
     
+    # create the dataloaders for the validation and test data. 
+    valset_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=False,  num_workers=5, persistent_workers=True)
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size,  num_workers=5, persistent_workers=True)
+
     # Forward pass of prediction to find on which data we do the most error
-    predict_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=False,  num_workers=5, persistent_workers=True)
+    trainset_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=False,  num_workers=5, persistent_workers=True)
     prediction_trainer = L.Trainer()
-    errors = prediction_trainer.predict(model=model, dataloaders=predict_loader)
+    errors = prediction_trainer.predict(model=model, dataloaders=trainset_loader)
     z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
     
     # We need to correct the indices, as the continuously changing indices cause index shift
@@ -66,25 +70,27 @@ def p2l_algorithm():
         trainer = L.Trainer(max_epochs=wandb.config['max_epochs'], callbacks=[EarlyStopping(monitor="train_loss", mode="min", patience=wandb.config['patience'])])
         trainer.fit(model=model, train_dataloaders=compression_loader)
 
-        # predict on the validation set
-        predict_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_validation_data())
-        predict_loader = torch.utils.data.DataLoader(predict_set, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
-        errors = prediction_trainer.predict(model=model, dataloaders=predict_loader)
+        # predict on the complement set
+        complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data())
+        complement_loader = torch.utils.data.DataLoader(complement_set, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
+        errors = prediction_trainer.predict(model=model, dataloaders=complement_loader)
         z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
 
         # We need to correct the indices, as the continuously changing indices cause index shift
         idx = dataset_idx.correct_idx(idx)
         
         wandb.log({'max_error': z})
+        # On va tester le modèle sur le complement et validation set, ainsi que calculer les bornes
         # On met le -1 pour qu'il log à l'itération 0, puis à toutes les log_iterations
         if compression_set_size - 1 % (wandb.config['data_groupsize'] * wandb.config['log_iterations']) == 0:
-            val_res = prediction_trainer.validate(model=model, dataloaders=predict_loader)
-            
-            metrics = {'val_error' : val_res[0]['validation_error']}
+            complement_res = prediction_trainer.validate(model=model, dataloaders=complement_loader)
+            validation_res = prediction_trainer.validate(model=model, dataloaders=valset_loader)
+            metrics = {'complement_error' : complement_res[0]['validation_error'], 'val_error': validation_res[0]['validation_error']}
+
             compute_real_valued_bounds(len(compression_set),
                                         n_sigma,
-                                        len(predict_set),
-                                        val_res[0]['validation_error'],
+                                        len(complement_set),
+                                        complement_res[0]['validation_error'],
                                         wandb.config['delta'],
                                         wandb.config['nbr_parameter_bounds'],
                                         metrics)
@@ -93,12 +99,13 @@ def p2l_algorithm():
 
     print(f"P2l ended with max error {z.item():.2f} and a compression set of size {compression_set_size}")
 
-    validation_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_validation_data())
-    validation_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
-    validation_results = prediction_trainer.validate(model, dataloaders=validation_loader)
+    # Test the model on the complement set
+    complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data())
+    complement_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
+    complement_results = prediction_trainer.validate(model, dataloaders=complement_loader)
 
-    test_dataset = CustomDataset(test_set.data, test_set.targets)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,  num_workers=5, persistent_workers=True)
+    # Test the model on the validation and test sets
+    validation_results = prediction_trainer.validate(model, dataloaders=valset_loader)
     test_results = prediction_trainer.test(model, dataloaders=test_loader)
 
     # log informations
@@ -106,15 +113,18 @@ def p2l_algorithm():
     information_dict['test_set_size'] = len(test_set)
     information_dict['compression_set_size'] = compression_set_size
 
-    information_dict['val_error'] = validation_results[0]['validation_error']
-    information_dict['val_loss'] = validation_results[0]['validation_loss']
+    information_dict['complement_error'] = complement_results[0]['validation_error']
+    information_dict['complement_loss'] = complement_results[0]['validation_loss']
+
+    information_dict['validation_error'] = validation_results[0]['validation_error']
+    information_dict['validation_loss'] = validation_results[0]['validation_loss']
 
     information_dict['test_error'] = test_results[0]['test_error']
     information_dict['test_loss'] = test_results[0]['test_loss']
 
     # compute the bounds
     n = len(train_set)
-    val_error = validation_results[0]['validation_error']
+    val_error = complement_results[0]['validation_error']
     k = val_error * (n-compression_set_size)
 
     if wandb.config['classic_bounds']:   
@@ -153,6 +163,7 @@ if __name__ == "__main__":
 
     # pretraining details
     parser.add_argument('-p', '--prior_size', type=float, default=0.0, help="Portion of the training set that is used to pre-train the model.")
+    parser.add_argument('-v', '--validation_size', type=float, default=0.1, help="Portion of the dataset that is used to validate the model.")
     parser.add_argument('-pti', '--pretraining_epochs', type=int, default=50, help="Number of epochs used to pretrain the model.")
     parser.add_argument('-plr', '--pretraining_lr', type=float, default=1e-3, help="Learning rate used by the optimizer to pretrain the model.")
 
@@ -169,7 +180,7 @@ if __name__ == "__main__":
     parser.add_argument('--nesterov', action='store_false', help="If the SGD optimizer should use Nesterov acceleration.")
 
     # p2l params
-    parser.add_argument('-mx', '--max_compression_size', type=int, default=-1,
+    parser.add_argument('-mx', '--max_compression_size', type=int, default=2,
                      help="Maximum size of the compression set added by the P2L algorithm. -1 if everything can be added")
     parser.add_argument('-dg', '--data_groupsize', type=int, default=1, help="Number of data added to the compression set at each iterations.")
     parser.add_argument('-pt', '--patience', type=int, default=3, help="Patience of the EarlyStopping Callback used to train on the compression set.")
