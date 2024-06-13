@@ -2,7 +2,7 @@ name: sweep
 method: grid
 metric:
   goal: minimize
-  name: validation_loss
+  name: kl_bound
   
 parameters:
   # pretraining details
@@ -21,7 +21,7 @@ parameters:
 
   # optimizer
   optimizer:
-    values: ["Adam"]
+    values: ["SGD", "Adam"]
   training_lr:
     values: [1e-3, 1e-4]
   momentum:

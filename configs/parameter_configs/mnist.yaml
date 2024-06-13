@@ -14,5 +14,5 @@ p2l_bounds: True
 real_bounds: True
 
 # miscellaneous
-log_iterations: 100
+log_iterations: 10
 deterministic: True
