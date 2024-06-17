@@ -21,9 +21,9 @@ parameters:
 
   # optimizer
   optimizer:
-    values: ["SGD", "Adam"]
+    value: "Adam"
   training_lr:
-    values: [1e-2, 1e-3, 1e-4]
+    values: [1e-2, 1e-3, 5e-3, 1e-4]
   momentum:
     value: 0.95
   nesterov:

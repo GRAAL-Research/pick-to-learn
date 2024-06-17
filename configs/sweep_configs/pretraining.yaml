@@ -2,7 +2,7 @@ name: sweep
 method: grid
 metric:
   goal: minimize
-  name: validation_loss
+  name: kl_bound
   
 parameters:
   # pretraining details
@@ -11,19 +11,19 @@ parameters:
   pretraining_epochs:
     values: [50, 100]
   pretraining_lr:
-    values: [1e-3, 1e-4]
+    values: [1e-2, 1e-3, 1e-4]
 
   # training details
   model_type:
-    values : ["cnn"]
+    value : "cnn"
   dropout_probability:
     values: [0.1, 0.2]
 
   # optimizer
   optimizer:
-    values: ["SGD", "Adam"]
+    value: "Adam"
   training_lr:
-    values: [1e-3, 1e-4]
+    values: [1e-3, 5e-3, 1e-4]
   momentum:
     value: 0.95
   nesterov:
@@ -33,6 +33,6 @@ parameters:
   max_compression_size:
     value: 1000
   data_groupsize: 
-    value: 1
+    value: [1, 32]
   patience:
     values: [3, 5] 
