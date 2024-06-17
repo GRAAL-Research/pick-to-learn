@@ -15,7 +15,7 @@ parameters:
 
   # training details
   model_type:
-    value : "mlp"
+    value : "cnn"
   dropout_probability:
     values: [0.1, 0.2]
 
@@ -23,7 +23,7 @@ parameters:
   optimizer:
     values: ["SGD", "Adam"]
   training_lr:
-    values: [1e-3, 1e-4]
+    values: [1e-2, 1e-3, 1e-4]
   momentum:
     value: 0.95
   nesterov:
@@ -33,6 +33,6 @@ parameters:
   max_compression_size:
     value: -1
   data_groupsize: 
-    values: [1]
+    value: 1
   patience:
-    values: [3]
+    value: 3

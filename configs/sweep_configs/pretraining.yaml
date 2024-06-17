@@ -7,21 +7,21 @@ metric:
 parameters:
   # pretraining details
   prior_size:
-    value: 0.1
+    value: 0.2
   pretraining_epochs:
     values: [50, 100]
   pretraining_lr:
-    values: [1e-2, 1e-3]
+    values: [1e-3, 1e-4]
 
   # training details
   model_type:
     values : ["cnn"]
   dropout_probability:
-    values: [0.2]
+    values: [0.1, 0.2]
 
   # optimizer
   optimizer:
-    values: ["Adam"]
+    values: ["SGD", "Adam"]
   training_lr:
     values: [1e-3, 1e-4]
   momentum:
@@ -31,8 +31,8 @@ parameters:
 
   # p2l params
   max_compression_size:
-    value: -1
+    value: 1000
   data_groupsize: 
-    values: [1]
+    value: 1
   patience:
-    values: [3]
+    values: [3, 5] 
