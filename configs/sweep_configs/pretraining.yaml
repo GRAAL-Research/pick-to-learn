@@ -5,6 +5,8 @@ metric:
   name: kl_bound
   
 parameters:
+  seed:
+    values: [1, 2, 3, 4, 42]
   # pretraining details
   prior_size:
     value: 0.2
@@ -33,6 +35,6 @@ parameters:
   max_compression_size:
     value: 1000
   data_groupsize: 
-    value: [1, 32]
+    values: [1, 32]
   patience:
     values: [3, 5] 

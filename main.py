@@ -33,4 +33,5 @@ if __name__ == "__main__":
     else:
         list_of_configs = create_all_configs(sweep_configuration)
         for sweep_config_ in list_of_configs:
-            run_sweep(sweep_config_ | config, name=sweep_configuration['name'])
+            exp_name = sweep_configuration['name'] + config['dataset']+ str(config['first_class']) + str(config['second_class'])
+            run_sweep(sweep_config_ | config, name=exp_name)
