@@ -25,9 +25,9 @@ parameters:
   training_lr:
     values: [1e-2, 1e-3, 5e-3, 1e-4]
   momentum:
-    value: 0.95
+    value: None
   nesterov:
-    value: True
+    value: None
 
   # p2l params
   max_compression_size:

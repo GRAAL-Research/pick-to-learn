@@ -94,7 +94,10 @@ def p2l_algorithm():
         if (compression_set_size ) % (wandb.config['data_groupsize'] * wandb.config['log_iterations']) == 0:
             complement_res = prediction_trainer.validate(model=model, dataloaders=complement_loader)
             validation_res = prediction_trainer.validate(model=model, dataloaders=valset_loader)
-            metrics = {'complement_error' : complement_res[0]['validation_error'], 'val_error': validation_res[0]['validation_error']}
+            test_results = prediction_trainer.test(model, dataloaders=test_loader)
+            metrics = {'complement_error' : complement_res[0]['validation_error'],
+                    'val_error': validation_res[0]['validation_error'], 
+                    'test_results': test_results[0]['test_error']}
 
             compute_real_valued_bounds(len(compression_set),
                                         n_sigma,

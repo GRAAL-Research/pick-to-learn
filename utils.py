@@ -6,6 +6,7 @@ from models.linear_network import MnistMlp
 from models.convolutional_network import MnistCnn, Cifar10Cnn9l
 from models.lightning_model import ClassificationModel
 import numpy as np
+from itertools import product
 
 class CustomDataset(torch.utils.data.Dataset):
     def __init__(self, data, targets, indices=None, transform=ToTensor()):
@@ -137,3 +138,48 @@ def split_train_validation_dataset(dataset : CustomDataset, validation_size : fl
 
     assert len(train_set) + len(validation_set) == len(dataset)
     return train_set, validation_set
+
+def check_can_be_converted_to_float(entry) -> bool:
+    try:
+        float_entry = float(entry)
+        return True
+    except ValueError:
+        return False
+
+def correct_type_of_entry(entry):
+    if isinstance(entry, list):
+        return [correct_type_of_entry(entry_) for entry_ in entry]
+    elif isinstance(entry, float):
+        return entry
+    elif isinstance(entry, str):
+        if entry == 'None':
+            return None
+        elif check_can_be_converted_to_float(entry):
+            return float(entry)
+        else:
+            return entry
+    elif isinstance(entry, int):
+        return entry
+    else:
+        raise ValueError(f'The entry type of {entry} is not recognised.')
+
+
+def create_all_configs(config):
+    if config['method'] != 'grid':
+        raise NotImplementedError(f'The hyperparameter tuning method {config['method']} is not supported.')
+    
+    list_of_keys = []
+    list_of_hyperparams = []
+    for key, item in config['parameters'].items():
+        list_of_keys.append(key)
+        if item.get('values', None) is not None:
+            val_ = correct_type_of_entry(item['values'])
+            list_of_hyperparams.append(val_)
+        elif item.get('value', None) is not None:
+            val_ = correct_type_of_entry(item['value'])
+            list_of_hyperparams.append([val_])
+        else:
+            raise ValueError(f"The parameter {key} doesn't have an item 'value' or 'values'. Please specify one.")
+    
+    list_of_configs = list(product(*list_of_hyperparams))
+    return [dict(zip(list_of_keys, config_)) for config_ in list_of_configs]
