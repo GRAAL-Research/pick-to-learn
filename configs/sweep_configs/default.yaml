@@ -5,6 +5,8 @@ metric:
   name: kl_bound
   
 parameters:
+  seed:
+    values: [1, 2, 3, 4, 42]
   # pretraining details
   prior_size:
     value: 0.0
