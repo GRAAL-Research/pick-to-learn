@@ -3,7 +3,8 @@ from p2l import p2l_algorithm
 import argparse
 import yaml
 from functools import partial
-from utils import create_all_configs
+from utils import create_all_configs, get_exp_file_name
+import os
 
 def run_sweep(config, name='p2l'):
     wandb.init(project=name, config=config)
@@ -33,4 +34,7 @@ if __name__ == "__main__":
     else:
         list_of_configs = create_all_configs(sweep_configuration)
         for sweep_config_ in list_of_configs:
-            run_sweep(sweep_config_ | config, name=sweep_configuration['name'])
+            config_name = get_exp_file_name(sweep_config_)
+            if not os.path.isfile(config_name):
+                exp_name = sweep_configuration['name'] + config['dataset']+ str(config['first_class']) + str(config['second_class'])
+                run_sweep(sweep_config_ | config, name=exp_name)

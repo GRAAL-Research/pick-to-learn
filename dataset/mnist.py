@@ -19,6 +19,18 @@ def load_binary_mnist(low=1, high=7):
 
     return train_set, test_set
 
+def load_low_high_mnist():
+    separator = 4
+
+    transform = ToTensor()
+    train_set = MNIST(root="MNIST", download=True, train=True, transform=transform)
+    train_set.targets = (train_set.targets > separator).to(int)
+
+    test_set = MNIST(root="MNIST", download=True, train=False, transform=transform)
+    test_set.targets = (test_set.targets > separator).to(int)
+
+    return train_set, test_set
+
 def load_mnist():
     transform = ToTensor()
     train_set = MNIST(root="MNIST", download=True, train=True, transform=transform)

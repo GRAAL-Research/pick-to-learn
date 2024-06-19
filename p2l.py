@@ -97,7 +97,7 @@ def p2l_algorithm():
             test_results = prediction_trainer.test(model, dataloaders=test_loader)
             metrics = {'complement_error' : complement_res[0]['validation_error'],
                     'val_error': validation_res[0]['validation_error'], 
-                    'test_results': test_results[0]['test_error']}
+                    'test_error': test_results[0]['test_error']}
 
             compute_real_valued_bounds(len(compression_set),
                                         n_sigma,
@@ -162,8 +162,7 @@ def p2l_algorithm():
     if not os.path.isdir("./experiment_logs"):
         os.mkdir("./experiment_logs")
 
-    file_name = f"exp_{wandb.config['dataset']}_{wandb.config['model_type']}_{str(datetime.datetime.now()).replace(' ', '_')}.json"
-    file_dir = "./experiment_logs/" + file_name
+    file_dir = get_exp_file_name(information_dict['config'])
     with open(file_dir, "w") as outfile: 
         json.dump(information_dict, outfile)
 
@@ -171,9 +170,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # dataset details 
-    parser.add_argument('-d', '--dataset', type=str, default="cifar10", help="Name of the dataset.")
+    parser.add_argument('-d', '--dataset', type=str, default="mnist", help="Name of the dataset.")
     parser.add_argument('-nc', '--n_classes', type=int, default=2, help="Number of classes used in the training set.")
-    parser.add_argument('-f', '--first_class', type=int, default=1, help="When the problem is binary classification, the first class used in the training set.")
+    parser.add_argument('-f', '--first_class', type=int, default=-1,
+                 help="When the problem is binary classification, the first class used in the training set. Use -1 for low_high problems. The second class is ignored.")
     parser.add_argument('-s', '--second_class', type=int, default=7, help="When the problem is binary classification, the second class used in the training set.")
 
     # pretraining details
