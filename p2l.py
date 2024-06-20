@@ -50,7 +50,7 @@ def p2l_algorithm():
 
     # Forward pass of prediction to find on which data we do the most error
     trainset_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=False,  num_workers=5, persistent_workers=True)
-    prediction_trainer = L.Trainer(devices=1, strategy='ddp')
+    prediction_trainer = L.Trainer(devices=1, strategy='ddp', logger=False, enable_checkpointing=False)
     errors = prediction_trainer.predict(model=model, dataloaders=trainset_loader)
     z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
     
