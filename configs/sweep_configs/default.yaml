@@ -17,7 +17,7 @@ parameters:
 
   # training details
   model_type:
-    value : "cnn"
+    values : ["mlp", "cnn"]
   dropout_probability:
     values: [0.1, 0.2]
 

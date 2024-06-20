@@ -50,7 +50,7 @@ def p2l_algorithm():
 
     # Forward pass of prediction to find on which data we do the most error
     trainset_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=False,  num_workers=5, persistent_workers=True)
-    prediction_trainer = L.Trainer(devices=1)
+    prediction_trainer = L.Trainer(devices=1, strategy='ddp')
     errors = prediction_trainer.predict(model=model, dataloaders=trainset_loader)
     z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
     
@@ -75,7 +75,11 @@ def p2l_algorithm():
         # train on the compression set
         compression_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_compression_data())
         compression_loader = torch.utils.data.DataLoader(compression_set, batch_size=batch_size,  num_workers=5, persistent_workers=True)
-        trainer = L.Trainer(max_epochs=wandb.config['max_epochs'], callbacks=[EarlyStopping(monitor="validation_loss", mode="min", patience=wandb.config['patience'])],devices=1)
+        trainer = L.Trainer(max_epochs=wandb.config['max_epochs'],
+                            logger=False,
+                            enable_checkpointing=False,
+                            strategy='ddp',
+                            callbacks=[EarlyStopping(monitor="validation_loss", mode="min", patience=wandb.config['patience'])])
         trainer.fit(model=model, train_dataloaders=compression_loader, val_dataloaders=valset_loader)
 
         # predict on the complement set

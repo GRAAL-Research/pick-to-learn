@@ -5,6 +5,7 @@ import yaml
 from functools import partial
 from utils import create_all_configs, get_exp_file_name
 import os
+from copy import deepcopy
 
 def run_sweep(config, name='p2l'):
     wandb.init(project=name, config=config)
@@ -33,8 +34,17 @@ if __name__ == "__main__":
         wandb.agent(sweep_id, function=start_sweep)
     else:
         list_of_configs = create_all_configs(sweep_configuration)
-        for sweep_config_ in list_of_configs:
-            config_name = get_exp_file_name(sweep_config_)
-            if not os.path.isfile(config_name):
-                exp_name = sweep_configuration['name'] + config['dataset']+ str(config['first_class']) + str(config['second_class'])
-                run_sweep(sweep_config_ | config, name=exp_name)
+        if not isinstance(config['first_class'], list):
+            config['first_class'] = [config['first_class']]
+            config['second_class'] = [config['second_class']]
+        
+        for idx in range(len(config['first_class'])):
+            new_config = deepcopy(config)
+            new_config['first_class'] = config['first_class'][idx]
+            new_config['second_class'] = config['second_class'][idx]
+            for sweep_config_ in list_of_configs:
+                exp_config = sweep_config_ | new_config
+                config_name = get_exp_file_name(exp_config)
+                if not os.path.isfile(config_name):
+                    exp_name = sweep_configuration['name'] + new_config['dataset']+ str(new_config['first_class']) + str(new_config['second_class'])
+                    run_sweep(exp_config, name=exp_name)
