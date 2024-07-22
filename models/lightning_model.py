@@ -1,8 +1,22 @@
-from torch import optim, nn
 import lightning as L
 import torch
 from torchmetrics.classification import MulticlassAccuracy
+import math
 
+class ClampedCrossEntropyLoss(torch.nn.Module):
+    def __init__(self, clamping=False, pmin=1e-5, reduction='mean'):
+        super().__init__()
+        self.clamping=clamping
+        self.pmin = pmin
+        self.log_softmax = torch.nn.LogSoftmax(dim=1)
+        self.loss = torch.nn.NLLLoss(reduction=reduction)
+
+    def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        out = self.log_softmax(input)
+        if self.clamping:
+            out = torch.clamp(out, min=math.log(self.pmin))
+        return self.loss(out, target)
+    
 
 class ClassificationModel(L.LightningModule):
     def __init__(self, model, optimizer="Adam", lr=1e-3, momentum=0.95, batch_size=64):
@@ -12,8 +26,9 @@ class ClassificationModel(L.LightningModule):
         self.momentum = momentum
         self.batch_size = batch_size
         self.model = model
-        self.loss = nn.CrossEntropyLoss()
+        self.configure_loss(clamping=False)
         self.metric = MulticlassAccuracy(num_classes=self.model.n_classes).to(self.device)
+        self.no_reduction_loss = torch.nn.CrossEntropyLoss(reduction='none')
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -28,7 +43,7 @@ class ClassificationModel(L.LightningModule):
     def predict_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self.model(x)
-        loss =  nn.CrossEntropyLoss(reduction='none')(y_hat, y)
+        loss = self.no_reduction_loss(y_hat, y)
         return loss
     
     def validation_step(self, batch, batch_idx):
@@ -54,9 +69,12 @@ class ClassificationModel(L.LightningModule):
     
     def configure_optimizers(self):
         if self.optimizer == "Adam":
-            optimizer = optim.Adam(self.parameters(), lr=self.lr)
+            optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         elif self.optimizer == "SGD":
-            optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum)
+            optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum)
         
         return optimizer
-
+    
+    def configure_loss(self, clamping : bool = False, pmin : float = 1e-5):
+        self.loss = ClampedCrossEntropyLoss(clamping=clamping, pmin=pmin, reduction='mean')
+    

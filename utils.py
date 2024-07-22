@@ -5,7 +5,7 @@ from torchvision.transforms import ToTensor
 from models.linear_network import MnistMlp
 from models.convolutional_network import MnistCnn, Cifar10Cnn9l
 from models.lightning_model import ClassificationModel
-import numpy as np
+from models.decision_tree import DecisionTree, DecisionTreeModel
 from itertools import product
 
 class CustomDataset(torch.utils.data.Dataset):
@@ -63,7 +63,7 @@ class CompressionSetIndexes(torch.Tensor):
 
     def correct_idx(self,indices):
         return self.complement_set.nonzero()[indices]
-
+    
 
 def get_max_error_idx(errors, k):
     error_tensor = torch.cat(errors)
@@ -74,7 +74,6 @@ def get_max_error_idx(errors, k):
     return values.max(), indices
 
 def create_model(config):
-
     if config.get('prior_size', 0.0) == 0.0:
         lr = config['training_lr']
     else:
@@ -106,11 +105,22 @@ def create_model(config):
                                                 momentum=config['momentum'],
                                                 batch_size=config['batch_size']
                                                 )
+    # elif config['model_type'] == "tree":
+    #     return DecisionTreeModel(DecisionTree(
+    #         n_classes=config['n_classes'],
+    #         max_depth=config['max_depth'],
+    #         min_samples_split=config['min_samples_split'],
+    #         min_samples_leaf=config['min_samples_leaf'],
+    #         seed=config['seed']
+    #     ))
     
     raise NotImplementedError(f"Model type = {config['model_type']} with dataset {config['dataset']} is not implemented yet.")
 
-def update_learning_rate(model, lr) -> None:
+def update_learning_rate(model, lr:float) -> None:
     model.lr = lr
+
+def add_clamping_to_model(model, pmin: float = 1e-5) -> None:
+    model.configure_loss(clamping=True, pmin=pmin)
 
 def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : float, validation_size : float):
     if prior_size == 0.0:
@@ -191,3 +201,11 @@ def get_exp_file_name(config):
         file_name += str(param) + "_"
     file_name += ".json"
     return "./experiment_logs/" + file_name
+
+def get_updated_batch_size(batch_size, dataset_length):
+    """
+    When batch_size == -1, we want to train on the whole dataset.
+    """
+    if batch_size == -1:
+        return dataset_length
+    return batch_size
