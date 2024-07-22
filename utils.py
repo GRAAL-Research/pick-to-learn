@@ -63,7 +63,7 @@ class CompressionSetIndexes(torch.Tensor):
 
     def correct_idx(self,indices):
         return self.complement_set.nonzero()[indices]
-
+    
 
 def get_max_error_idx(errors, k):
     error_tensor = torch.cat(errors)
@@ -74,7 +74,6 @@ def get_max_error_idx(errors, k):
     return values.max(), indices
 
 def create_model(config):
-
     if config.get('prior_size', 0.0) == 0.0:
         lr = config['training_lr']
     else:
@@ -117,8 +116,11 @@ def create_model(config):
     
     raise NotImplementedError(f"Model type = {config['model_type']} with dataset {config['dataset']} is not implemented yet.")
 
-def update_learning_rate(model, lr) -> None:
+def update_learning_rate(model, lr:float) -> None:
     model.lr = lr
+
+def add_clamping_to_model(model, pmin: float = 1e-5) -> None:
+    model.configure_loss(clamping=True, pmin=pmin)
 
 def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : float, validation_size : float):
     if prior_size == 0.0:

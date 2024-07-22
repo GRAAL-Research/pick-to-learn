@@ -74,6 +74,8 @@ def p2l_algorithm():
 
     # Updates the lr, as it might not be the same in the pretraining and training
     update_learning_rate(model, wandb.config['training_lr'])
+    if wandb.config['clamping']:
+        add_clamping_to_model(model, wandb.config['min_probability'])
 
     max_compression_size = len(train_set) if wandb.config['max_compression_size'] == -1 else wandb.config['max_compression_size']
 
@@ -199,7 +201,7 @@ if __name__ == "__main__":
 
     # dataset details 
     parser.add_argument('-d', '--dataset', type=str, default="mnist", help="Name of the dataset.")
-    parser.add_argument('-nc', '--n_classes', type=int, default=2, help="Number of classes used in the training set.")
+    parser.add_argument('-nc', '--n_classes', type=int, default=10, help="Number of classes used in the training set.")
     parser.add_argument('-f', '--first_class', type=int, default=-1,
                  help="When the problem is binary classification, the first class used in the training set. Use -1 for low_high problems. The second class is ignored.")
     parser.add_argument('-s', '--second_class', type=int, default=7, help="When the problem is binary classification, the second class used in the training set.")
@@ -227,8 +229,10 @@ if __name__ == "__main__":
                      help="Maximum size of the compression set added by the P2L algorithm. -1 if everything can be added")
     parser.add_argument('-dg', '--data_groupsize', type=int, default=1, help="Number of data added to the compression set at each iterations.")
     parser.add_argument('-pt', '--patience', type=int, default=3, help="Patience of the EarlyStopping Callback used to train on the compression set.")
+    parser.add_argument('--clamping', action='store_false', help="If you want to clamp the cross-entropy loss during training.")
+    parser.add_argument('-pmin', '--min_probability', type=float, default=1e-5, help="Minimum probability bound for clamping.")
     
-    # tree parameters
+    # tree parameters (only used if model_type == "tree")
     parser.add_argument('-mxd', '--max_depth', type=int, default=10, help="Max depth of the tree.")
     parser.add_argument('-mss', '--min_samples_split', type=int, default=2)
     parser.add_argument('-msl', '--min_samples_leaf', type=int, default=1)
