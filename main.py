@@ -47,6 +47,6 @@ if __name__ == "__main__":
                 config_name = get_exp_file_name(exp_config)
                 if not os.path.isfile(config_name):
                     exp_name = sweep_configuration['name'] + new_config['dataset']
-                    if new_config['n_classes']:
+                    if new_config['n_classes'] == 2:
                         exp_name += str(new_config['first_class']) + str(new_config['second_class'])
                     run_sweep(exp_config, name=exp_name)
