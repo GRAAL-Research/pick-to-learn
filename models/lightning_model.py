@@ -1,4 +1,3 @@
-from torch import optim, nn
 import lightning as L
 import torch
 from torchmetrics.classification import MulticlassAccuracy
@@ -12,7 +11,7 @@ class ClassificationModel(L.LightningModule):
         self.momentum = momentum
         self.batch_size = batch_size
         self.model = model
-        self.loss = nn.CrossEntropyLoss()
+        self.loss = torch.nn.CrossEntropyLoss()
         self.metric = MulticlassAccuracy(num_classes=self.model.n_classes).to(self.device)
 
     def training_step(self, batch, batch_idx):
@@ -28,7 +27,7 @@ class ClassificationModel(L.LightningModule):
     def predict_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self.model(x)
-        loss =  nn.CrossEntropyLoss(reduction='none')(y_hat, y)
+        loss = torch.nn.CrossEntropyLoss(reduction='none')(y_hat, y)
         return loss
     
     def validation_step(self, batch, batch_idx):
@@ -54,9 +53,9 @@ class ClassificationModel(L.LightningModule):
     
     def configure_optimizers(self):
         if self.optimizer == "Adam":
-            optimizer = optim.Adam(self.parameters(), lr=self.lr)
+            optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         elif self.optimizer == "SGD":
-            optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum)
+            optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum)
         
         return optimizer
 
