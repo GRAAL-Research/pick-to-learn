@@ -31,7 +31,7 @@ def p2l_algorithm():
     if wandb.config['prior_size'] != 0.0:
         prior_set, train_set, validation_set = split_prior_train_validation_dataset(train_set, wandb.config['prior_size'], wandb.config['validation_size'])
         prior_loader= torch.utils.data.DataLoader(prior_set, batch_size=batch_size, shuffle=False,  num_workers=5, persistent_workers=True)
-        prior_trainer = L.Trainer(max_epochs=wandb.config['pretraining_epochs'])
+        prior_trainer = L.Trainer(devices=1, max_epochs=wandb.config['pretraining_epochs'])
         prior_trainer.fit(model=model, train_dataloaders=prior_loader)
     else:
         train_set, validation_set = split_train_validation_dataset(train_set, wandb.config['validation_size'])
@@ -50,7 +50,9 @@ def p2l_algorithm():
 
     # Forward pass of prediction to find on which data we do the most error
     trainset_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=False,  num_workers=5, persistent_workers=True)
-    prediction_trainer = L.Trainer(devices=1, strategy='ddp', logger=False, enable_checkpointing=False)
+    prediction_trainer = L.Trainer(devices=1,
+                                  logger=False,
+                                    enable_checkpointing=False)
     errors = prediction_trainer.predict(model=model, dataloaders=trainset_loader)
     z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
     
@@ -78,7 +80,7 @@ def p2l_algorithm():
         trainer = L.Trainer(max_epochs=wandb.config['max_epochs'],
                             logger=False,
                             enable_checkpointing=False,
-                            strategy='ddp',
+                            devices=1,
                             callbacks=[EarlyStopping(monitor="validation_loss", mode="min", patience=wandb.config['patience'])])
         trainer.fit(model=model, train_dataloaders=compression_loader, val_dataloaders=valset_loader)
 
@@ -99,12 +101,12 @@ def p2l_algorithm():
             validation_res = prediction_trainer.validate(model=model, dataloaders=valset_loader)
             test_results = prediction_trainer.test(model, dataloaders=test_loader)
             metrics = {'complement_error' : complement_res[0]['validation_error'],
-                    'val_error': validation_res[0]['validation_error'], 
+                    'validation_error': validation_res[0]['validation_error'], 
                     'test_error': test_results[0]['test_error']}
 
             compute_real_valued_bounds(len(compression_set),
                                         n_sigma,
-                                        len(complement_set),
+                                        len(train_set),
                                         complement_res[0]['validation_error'],
                                         wandb.config['delta'],
                                         wandb.config['nbr_parameter_bounds'],

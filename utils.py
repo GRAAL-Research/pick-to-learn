@@ -42,7 +42,7 @@ class CustomDataset(torch.utils.data.Dataset):
         return img, target
 
 class CompressionSetIndexes(torch.Tensor):
-    def __init__(self, n:int ):
+    def __init__(self, n : int ):
         super().__init__()
         self.complement_set = torch.ones(n, dtype=torch.bool) # True if the data is in the validation set
 

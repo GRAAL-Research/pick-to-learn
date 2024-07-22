@@ -6,20 +6,32 @@ from bounds.bound_utils import log_binomial_coefficient, zeta
 from bounds.kl_inv import kl_inv
 
 def compute_epsilon(m, n_sigma, n, delta):
+  if n == m:
+     return np.inf
   prior_message = 1/n_sigma
   log_delta = log_binomial_coefficient(n,m) - np.log(zeta(m)*prior_message*delta)
   return log_delta / (n-m)
 
 
 def kl_bound(m, n, val_error, epsilon):
+    # sanity condition
+    if n == m:
+       return 1
     epsilon += np.log(2*np.sqrt(n-m))/ (n-m)
     return kl_inv(val_error, epsilon, "MAX")
 
 def linear_bound(m,n, val_error, epsilon, t):
+    # sanity condition
+    if n == m:
+       return 1
+    
     epsilon = epsilon / t + t/8
     return val_error + epsilon
 
 def catoni_bound(m, n, val_error, epsilon, C):
+    # sanity condition
+    if n == m:
+       return 1
     bound = -C * val_error - epsilon
     bound = 1- np.exp(bound)
     return bound / (1-np.exp(-C))

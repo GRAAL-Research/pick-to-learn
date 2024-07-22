@@ -6,6 +6,10 @@ import numpy as np
 from bounds.bound_utils import log_binomial_coefficient, zeta
 
 def bisection_binomial_tail_inversion(k, n, delta):
+  # sanity condition
+  if n == 0:
+    return 1
+  
   low = 0
   high = 1
   while (high - low) >  1e-10:
@@ -22,6 +26,10 @@ def bisection_binomial_tail_inversion(k, n, delta):
     return 1
 
 def brute_force_binomial_tail_inversion(k, n, delta, precision=1e-06):
+  # sanity condition
+  if n == 0:
+    return 1
+  
   linspace = np.arange(0,1+precision, precision)
   cdf = binom.logcdf(k, n, linspace)
   diff = cdf - delta
@@ -34,6 +42,10 @@ def brute_force_binomial_tail_inversion(k, n, delta, precision=1e-06):
     return 1
 
 def beta_ppf(k, n, delta):
+  # sanity condition
+  if n == 0:
+    return 1
+  
   ppf = beta.ppf(1-delta, k+1, n-k)
   return ppf
 
@@ -42,10 +54,18 @@ def beta_isf(k, n, delta):
   Selon la documentation, (voir https://docs.scipy.org/doc/scipy/tutorial/stats/discrete.html#inverse-survival-function)
   isf(delta) = ppf(1-delta), et isf est parfois plus précis que ppf.
   """
+  # sanity condition
+  if n == 0:
+    return 1
+  
   isf = beta.isf(delta, k+1, n-k)
   return isf
 
 def binomial_approximation(k, n, delta):
+  # sanity condition
+  if n == 0:
+    return 1
+  
   first = log_binomial_coefficient(n, k)
   second = -delta
   exponential = first + second
