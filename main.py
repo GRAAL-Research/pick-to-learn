@@ -3,9 +3,10 @@ from p2l import p2l_algorithm
 import argparse
 import yaml
 from functools import partial
-from utils import create_all_configs, get_exp_file_name
+from utils import create_all_configs, get_exp_file_name, correct_type_of_entry
 import os
 from copy import deepcopy
+
 
 def run_sweep(config, name='p2l'):
     wandb.init(project=name, config=config)
@@ -26,6 +27,10 @@ if __name__ == "__main__":
     params_config_name = "./configs/parameter_configs/" + args.params_config + ".yaml"
     with open(params_config_name) as file:
         config = yaml.safe_load(file)
+
+    # correct types of entries to make sure all floats/ints are parsed as such
+    for key, value in config.items():
+        config[key] = correct_type_of_entry(value)
 
     if args.online:
         sweep_id = wandb.sweep(sweep=sweep_configuration, project="p2l")

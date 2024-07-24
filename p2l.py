@@ -11,12 +11,13 @@ import os
 import json
 import argparse
 import wandb
+import numpy as np
 
 def p2l_algorithm():
     seed_everything(wandb.config['seed'], workers=True)
 
     # constants to be used later 
-    STOP = torch.log(torch.tensor(wandb.config['n_classes']))
+    STOP = torch.log(torch.tensor(2)) #torch.log(torch.tensor(wandb.config['n_classes']))
     batch_size = wandb.config['batch_size'] 
     n_sigma = 1
     information_dict = {}
@@ -187,7 +188,11 @@ def p2l_algorithm():
     if wandb.config['real_bounds']:
         print(("-"*20) + " Real valued bounds " + "-"*20)
         compute_real_valued_bounds(compression_set_size, n_sigma, n, val_error, wandb.config['delta'], wandb.config['nbr_parameter_bounds'], information_dict)
-
+        if wandb.config['clamping']:
+            print(("-"*20) + " Real valued bounds for bounded cross entropy" + "-"*20)
+            compute_real_valued_bounds(compression_set_size, n_sigma, n, complement_results[0]['validation_loss'], wandb.config['delta'],
+                                        wandb.config['nbr_parameter_bounds'], information_dict, min_val=0, 
+                                        max_val=-np.log(wandb.config['min_probability']), cross_entropy=True)
     wandb.log(information_dict)
 
     information_dict['config'] = dict(wandb.config)
@@ -208,7 +213,7 @@ if __name__ == "__main__":
     parser.add_argument('-nc', '--n_classes', type=int, default=10, help="Number of classes used in the training set.")
     parser.add_argument('-f', '--first_class', type=int, default=-1,
                  help="When the problem is binary classification, the first class used in the training set. Use -1 for low_high problems. The second class is ignored.")
-    parser.add_argument('-s', '--second_class', type=int, default=7, help="When the problem is binary classification, the second class used in the training set.")
+    parser.add_argument('-s', '--second_class', type=int, default=-1, help="When the problem is binary classification, the second class used in the training set.")
 
     # pretraining details
     parser.add_argument('-p', '--prior_size', type=float, default=0.0, help="Portion of the training set that is used to pre-train the model.")
