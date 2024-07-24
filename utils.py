@@ -4,7 +4,7 @@ import torch.utils
 from torchvision.transforms import ToTensor
 from models.linear_network import MnistMlp
 from models.convolutional_network import MnistCnn, Cifar10Cnn9l
-from models.lightning_model import ClassificationModel
+from models.classification_model import ClassificationModel
 from models.decision_tree import DecisionTree, DecisionTreeModel
 from itertools import product
 
