@@ -1,11 +1,12 @@
 import torch
+import lightning as L
 from PIL import Image
 import torch.utils
 from torchvision.transforms import ToTensor
 from models.linear_network import MnistMlp
 from models.convolutional_network import MnistCnn, Cifar10Cnn9l
 from models.classification_model import ClassificationModel
-from models.decision_tree import DecisionTree, DecisionTreeModel
+from models.decision_tree import RegressionTree, RegressionTreeModel, RegressionForest
 from itertools import product
 
 class CustomDataset(torch.utils.data.Dataset):
@@ -105,22 +106,33 @@ def create_model(config):
                                                 momentum=config['momentum'],
                                                 batch_size=config['batch_size']
                                                 )
-    # elif config['model_type'] == "tree":
-    #     return DecisionTreeModel(DecisionTree(
-    #         n_classes=config['n_classes'],
-    #         max_depth=config['max_depth'],
-    #         min_samples_split=config['min_samples_split'],
-    #         min_samples_leaf=config['min_samples_leaf'],
-    #         seed=config['seed']
-    #     ))
+    elif config['dataset'] == "concrete":
+        if config['model_type'] == "tree":
+            return RegressionTreeModel(RegressionTree(
+                max_depth=config['max_depth'],
+                min_samples_split=config['min_samples_split'],
+                min_samples_leaf=config['min_samples_leaf'],
+                seed=config['seed']
+            ))
+        elif config['model_type'] == "forest":
+            return RegressionTreeModel(RegressionForest(
+                n_estimators=config['n_estimators'],
+                max_depth=config['max_depth'],
+                min_samples_split=config['min_samples_split'],
+                min_samples_leaf=config['min_samples_leaf'],
+                seed=config['seed']
+            ))
     
     raise NotImplementedError(f"Model type = {config['model_type']} with dataset {config['dataset']} is not implemented yet.")
 
 def update_learning_rate(model, lr:float) -> None:
     model.lr = lr
 
-def add_clamping_to_model(model, pmin: float = 1e-5) -> None:
-    model.configure_loss(clamping=True, pmin=pmin)
+def add_clamping_to_model(model, config) -> None:
+    if config['regression']:
+        model.configure_loss(clamping=True, min_val=config['min_val'], max_val=config['max_val'])
+    else:
+        model.configure_loss(clamping=True, pmin=config['min_probability'])
 
 def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : float, validation_size : float):
     if prior_size == 0.0:
@@ -202,10 +214,29 @@ def get_exp_file_name(config):
     file_name += ".json"
     return "./experiment_logs/" + file_name
 
-def get_updated_batch_size(batch_size, dataset_length):
+def get_updated_batch_size(batch_size, model_type, dataset_length):
     """
     When batch_size == -1, we want to train on the whole dataset.
     """
-    if batch_size == -1:
+    if model_type in ['tree', 'forest']:
         return dataset_length
     return batch_size
+
+def get_dataloader(dataset, batch_size, shuffle=False, num_workers=5, persistent_workers=True):
+    return torch.utils.data.DataLoader(dataset,
+                                        batch_size=batch_size,
+                                        shuffle=shuffle,
+                                        num_workers=num_workers, 
+                                        persistent_workers=persistent_workers)
+
+def get_trainer(accelerator='auto', devices=1, max_epochs=None, logger=False,
+                enable_checkpointing=False, callbacks=None):
+    return L.Trainer(accelerator=accelerator,
+                     devices=devices,
+                    max_epochs=max_epochs,
+                    logger=logger,
+                    enable_checkpointing=enable_checkpointing,
+                    callbacks=callbacks)
+
+def get_accelerator(model_type:str):
+    return 'cpu' if model_type in ["tree", 'forest'] else 'auto'

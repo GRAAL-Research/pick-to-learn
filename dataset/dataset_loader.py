@@ -1,5 +1,6 @@
 from dataset.mnist import load_binary_mnist, load_low_high_mnist, load_mnist
 from dataset.cifar10 import load_binary_cifar10
+from dataset.regression_datasets import load_concrete
 
 
 def load_dataset(config):
@@ -20,5 +21,7 @@ def load_dataset(config):
                                                 high=config['second_class'])
         else:
             raise NotImplementedError(f"{config['dataset']} with {config['n_classes']} is not supported.")
+    elif config['dataset'] == "concrete":
+        return load_concrete(config['test_size'])
     else:
         raise NotImplementedError(f"The dataset {config['dataset']} is not supported yet.")

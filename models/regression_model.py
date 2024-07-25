@@ -1,7 +1,7 @@
 import lightning as L
 import torch
 
-class ClampedMSELoss(torch.nn.Module):
+class ClampedRMSELoss(torch.nn.Module):
     def __init__(self, clamping=False, min_val=0, max_val=torch.inf):
         super().__init__()
         self.clamping=clamping
@@ -14,7 +14,7 @@ class ClampedMSELoss(torch.nn.Module):
         out = self.loss(input, target)
         if self.clamping:
             out = torch.clamp(out, max=self.max_error)
-        return out.mean()
+        return torch.sqrt(out.mean())
     
 
 class RegressionModel(L.LightningModule):
@@ -39,7 +39,7 @@ class RegressionModel(L.LightningModule):
     def predict_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self.model(x)
-        loss = self.no_reduction_loss(y_hat, y)
+        loss = torch.sqrt(self.no_reduction_loss(y_hat, y))
         return loss
     
     def validation_step(self, batch, batch_idx):
@@ -64,5 +64,5 @@ class RegressionModel(L.LightningModule):
         return optimizer
     
     def configure_loss(self, clamping : bool = False, min_val : float = 0, max_val=torch.inf):
-        self.loss = ClampedMSELoss(clamping=clamping, min_val=min_val, max_val=max_val)
+        self.loss = ClampedRMSELoss(clamping=clamping, min_val=min_val, max_val=max_val)
     
