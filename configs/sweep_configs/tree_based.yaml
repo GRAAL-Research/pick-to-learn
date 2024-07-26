@@ -1,0 +1,21 @@
+name: sweep
+method: grid
+metric:
+  goal: minimize
+  name: kl_bound
+  
+parameters:
+  seed:
+    values: [1, 2, 3, 4, 42]
+  model_type:
+    value: tree
+  max_epochs:
+    value: 1
+
+# p2l params
+  max_compression_size:
+    value: -1
+  data_groupsize: 
+    value: 1
+  patience:
+    value: 3

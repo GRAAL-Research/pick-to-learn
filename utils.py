@@ -8,6 +8,8 @@ from models.convolutional_network import MnistCnn, Cifar10Cnn9l
 from models.classification_model import ClassificationModel
 from models.decision_tree import RegressionTree, RegressionTreeModel, RegressionForest
 from itertools import product
+import wandb
+from bounds.real_valued_bounds import compute_real_valued_bounds
 
 class CustomDataset(torch.utils.data.Dataset):
     def __init__(self, data, targets, indices=None, transform=ToTensor()):
@@ -240,3 +242,37 @@ def get_trainer(accelerator='auto', devices=1, max_epochs=None, logger=False,
 
 def get_accelerator(model_type:str):
     return 'cpu' if model_type in ["tree", 'forest'] else 'auto'
+
+def log_metrics(trainer, model, complement_loader, valset_loader, test_loader, compression_set_length, train_set_length, n_sigma):
+    complement_res = trainer.validate(model=model, dataloaders=complement_loader)
+    validation_res = trainer.validate(model=model, dataloaders=valset_loader)
+    test_results = trainer.test(model, dataloaders=test_loader)
+
+    if wandb.config['regression']:
+        metrics = {'complement_loss' : complement_res[0]['validation_loss'],
+                'validation_loss': validation_res[0]['validation_loss'],
+                'test_loss': test_results[0]['test_loss']}
+
+        compute_real_valued_bounds(compression_set_length,
+                                    n_sigma,
+                                    train_set_length,
+                                    complement_res[0]['validation_loss'],
+                                    wandb.config['delta'],
+                                    wandb.config['nbr_parameter_bounds'],
+                                    metrics,
+                                    min_val=wandb.config['min_val'],
+                                    max_val=wandb.config['max_val'])
+    else:
+        metrics = {'complement_error' : complement_res[0]['validation_error'],
+                'validation_error': validation_res[0]['validation_error'],
+                'test_error': test_results[0]['test_error']}
+
+        compute_real_valued_bounds(compression_set_length,
+                                    n_sigma,
+                                    train_set_length,
+                                    complement_res[0]['validation_error'],
+                                    wandb.config['delta'],
+                                    wandb.config['nbr_parameter_bounds'],
+                                    metrics)
+
+    wandb.log(metrics)

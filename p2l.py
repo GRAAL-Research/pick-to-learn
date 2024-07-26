@@ -35,9 +35,6 @@ def p2l_algorithm():
     # if there is pretraining, train the model on the prior set.
     if wandb.config['prior_size'] != 0.0:
         prior_set, train_set, validation_set = split_prior_train_validation_dataset(train_set, wandb.config['prior_size'], wandb.config['validation_size'])
-        prior_loader= get_dataloader(dataset=prior_set, batch_size=batch_size)
-        prior_trainer = get_trainer(accelerator=accelerator, max_epochs=wandb.config['pretraining_epochs'])
-        prior_trainer.fit(model=model, train_dataloaders=prior_loader)
     else:
         train_set, validation_set = split_train_validation_dataset(train_set, wandb.config['validation_size'])
 
@@ -50,12 +47,25 @@ def p2l_algorithm():
     dataset_idx = CompressionSetIndexes(len(train_set))
     
     # create the dataloaders for the validation and test data. 
-    valset_loader = get_dataloader(dataset=validation_set, batch_size=batch_size,)
+    trainset_loader = get_dataloader(dataset=train_set, batch_size=batch_size)
+    valset_loader = get_dataloader(dataset=validation_set, batch_size=batch_size)
     test_loader = get_dataloader(dataset=test_dataset, batch_size=batch_size)
 
+    if wandb.config['prior_size'] != 0.0:
+        prior_loader= get_dataloader(dataset=prior_set, batch_size=batch_size)
+        prior_trainer = get_trainer(accelerator=accelerator, max_epochs=wandb.config['pretraining_epochs'])
+        prior_trainer.fit(model=model, train_dataloaders=prior_loader)
+        
     # Forward pass of prediction to find on which data we do the most error
-    trainset_loader = get_dataloader(dataset=train_set, batch_size=batch_size)
     prediction_trainer = get_trainer(accelerator=accelerator)
+    log_metrics(prediction_trainer,
+                model,
+                trainset_loader,
+                valset_loader,
+                test_loader,
+                0,
+                len(train_set),
+                n_sigma)
     errors = prediction_trainer.predict(model=model, dataloaders=trainset_loader)
     z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
     
@@ -103,38 +113,14 @@ def p2l_algorithm():
         # On va tester le modèle sur le complement et validation set, ainsi que calculer les bornes
         # On met le -1 pour qu'il log à l'itération 0, puis à toutes les log_iterations
         if (compression_set_size ) % (wandb.config['data_groupsize'] * wandb.config['log_iterations']) == 0:
-            complement_res = prediction_trainer.validate(model=model, dataloaders=complement_loader)
-            validation_res = prediction_trainer.validate(model=model, dataloaders=valset_loader)
-            test_results = prediction_trainer.test(model, dataloaders=test_loader)
-
-            if wandb.config['regression']:
-                metrics = {'complement_loss' : complement_res[0]['validation_loss'],
-                        'validation_loss': validation_res[0]['validation_loss'],
-                        'test_loss': test_results[0]['test_loss']}
-
-                compute_real_valued_bounds(len(compression_set),
-                                            n_sigma,
-                                            len(train_set),
-                                            complement_res[0]['validation_loss'],
-                                            wandb.config['delta'],
-                                            wandb.config['nbr_parameter_bounds'],
-                                            metrics,
-                                            min_val=wandb.config['min_val'],
-                                            max_val=wandb.config['max_val'])
-            else:
-                metrics = {'complement_error' : complement_res[0]['validation_error'],
-                        'validation_error': validation_res[0]['validation_error'],
-                        'test_error': test_results[0]['test_error']}
-
-                compute_real_valued_bounds(len(compression_set),
-                                            n_sigma,
-                                            len(train_set),
-                                            complement_res[0]['validation_error'],
-                                            wandb.config['delta'],
-                                            wandb.config['nbr_parameter_bounds'],
-                                            metrics)
-
-            wandb.log(metrics)
+            log_metrics(prediction_trainer,
+                        model,
+                        complement_loader,
+                        valset_loader,
+                        test_loader,
+                        len(compression_set),
+                        len(train_set),
+                        n_sigma)
 
 
     print(f"P2l ended with max error {z.item():.2f} and a compression set of size {compression_set_size}")
