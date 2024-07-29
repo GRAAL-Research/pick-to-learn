@@ -37,7 +37,8 @@ def catoni_bound(m, n, val_error, epsilon, C):
     return bound / (1-np.exp(-C))
 
 def compute_real_valued_bounds(m, n_sigma, n, val_error, delta, nbr_parameter_bounds,  information_dict, min_val=0, max_val=1, prefix=""):
-  prefix = prefix + "_"
+  if len(prefix) != 0:
+     prefix = prefix + "_"
   
   bounded_val_error = val_error / (max_val - min_val)
 
