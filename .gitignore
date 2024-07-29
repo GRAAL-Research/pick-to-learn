@@ -167,3 +167,4 @@ experiment_logs/
 baseline_logs/
 cifar10/
 results/
+prior_models/

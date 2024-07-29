@@ -20,6 +20,7 @@ class ClampedRMSELoss(torch.nn.Module):
 class RegressionModel(L.LightningModule):
     def __init__(self, model, optimizer="Adam", lr=1e-3, momentum=0.95, batch_size=64):
         super().__init__()
+        self.save_hyperparameters()
         self.optimizer = optimizer
         self.lr = lr
         self.momentum = momentum

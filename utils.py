@@ -132,6 +132,16 @@ def create_model(config):
     
     raise NotImplementedError(f"Model type = {config['model_type']} with dataset {config['dataset']} is not implemented yet.")
 
+def load_pretrained_model(checkpoint_path, config):
+    if config['regression']:
+        if config['model_type'] in ['tree', 'forest']:
+            return RegressionTreeModel.load_from_checkpoint(checkpoint_path)
+    else:
+        if config['model_type'] in ['mlp', 'cnn']:
+            return ClassificationModel.load_from_checkpoint(checkpoint_path)
+    setting = "regression" if config['regression'] else "classification"
+    raise NotImplementedError(f"Loading checkpoints for a {config['model_type']} in a {setting} setting is not supported yet.")
+
 def update_learning_rate(model, lr:float) -> None:
     model.lr = lr
 

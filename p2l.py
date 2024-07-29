@@ -23,8 +23,8 @@ def p2l_algorithm():
     information_dict = {}
     accelerator = get_accelerator(wandb.config['model_type'])
 
-    # create models, load dataset and split it if necessary
-    model = create_model(wandb.config)
+    ######################## DATASET ########################
+    # Load dataset and split it if necessary
     train_set, test_set = load_dataset(wandb.config)
 
     # Will be used at the end to test the model.
@@ -48,10 +48,24 @@ def p2l_algorithm():
     valset_loader = get_dataloader(dataset=validation_set, batch_size=batch_size)
     test_loader = get_dataloader(dataset=test_dataset, batch_size=batch_size)
 
-    if wandb.config['prior_size'] != 0.0:
-        prior_loader= get_dataloader(dataset=prior_set, batch_size=batch_size)
-        prior_trainer = get_trainer(accelerator=accelerator, max_epochs=wandb.config['pretraining_epochs'])
-        prior_trainer.fit(model=model, train_dataloaders=prior_loader)
+    ######################## MODEL ########################
+    if wandb.config['prior_size'] == 0.0:
+         model = create_model(wandb.config)
+    else:
+        file_path = "./prior_models/"
+        if not os.path.isdir(file_path):
+            os.mkdir(file_path)
+            
+        model_name = f"prior_model_{wandb.config['prior_size']}_{wandb.config['pretraining_lr']}_{wandb.config['pretraining_epochs']}.ckpt"
+        file_path = file_path + model_name
+        if os.path.isfile(file_path):
+            model = load_pretrained_model(file_path, wandb.config)
+        else:
+            model = create_model(wandb.config)
+            prior_loader= get_dataloader(dataset=prior_set, batch_size=batch_size)
+            prior_trainer = get_trainer(accelerator=accelerator, max_epochs=wandb.config['pretraining_epochs'])
+            prior_trainer.fit(model=model, train_dataloaders=prior_loader)
+            prior_trainer.save_checkpoint(file_path)
         
     # Updates the lr, as it might not be the same in the pretraining and training
     update_learning_rate(model, wandb.config.get('training_lr', None))
@@ -204,22 +218,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # dataset details 
-    parser.add_argument('-d', '--dataset', type=str, default="concrete", help="Name of the dataset.")
-    parser.add_argument('-r', '--regression', action='store_false', help="If the dataset is a regression problem.")
+    parser.add_argument('-d', '--dataset', type=str, default="mnist", help="Name of the dataset.")
+    parser.add_argument('-r', '--regression', action='store_true', help="If the dataset is a regression problem.")
     parser.add_argument('-nc', '--n_classes', type=int, default=10, help="Number of classes used in the training set.")
     parser.add_argument('-f', '--first_class', type=int, default=-1,
                  help="When the problem is binary classification, the first class used in the training set. Use -1 for low_high problems. The second class is ignored.")
     parser.add_argument('-s', '--second_class', type=int, default=-1, help="When the problem is binary classification, the second class used in the training set.")
 
     # pretraining details
-    parser.add_argument('-p', '--prior_size', type=float, default=0.0, help="Portion of the training set that is used to pre-train the model.")
+    parser.add_argument('-p', '--prior_size', type=float, default=0.2, help="Portion of the training set that is used to pre-train the model.")
     parser.add_argument('-v', '--validation_size', type=float, default=0.1, help="Portion of the dataset that is used to validate the model.")
     parser.add_argument('-t', '--test_size', type=float, default=0.1, help="Portion of the dataset that is used to test the model, when the test dataset is not defined.")
     parser.add_argument('-pti', '--pretraining_epochs', type=int, default=50, help="Number of epochs used to pretrain the model.")
     parser.add_argument('-plr', '--pretraining_lr', type=float, default=1e-3, help="Learning rate used by the optimizer to pretrain the model.")
 
     # training details
-    parser.add_argument('-m', '--model_type', type=str, default="forest", help="Type of model to train.")
+    parser.add_argument('-m', '--model_type', type=str, default="cnn", help="Type of model to train.")
     parser.add_argument('-me', '--max_epochs', type=int, default=1, help="Maximum number of epochs to train the model at each step of P2L.")
     parser.add_argument('-b', '--batch_size', type=int, default=64, help="Batch size used to train the model.")
     parser.add_argument('-dp', '--dropout_probability', type=float, default=0.2, help="Dropout probability for the layers of the model.")
