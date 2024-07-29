@@ -17,10 +17,7 @@ def p2l_algorithm():
     seed_everything(wandb.config['seed'], workers=True)
 
     # constants to be used later 
-    if wandb.config['regression']:
-        STOP = 0.5
-    else:
-        STOP = torch.log(torch.tensor(2))
+    STOP = torch.log(torch.tensor(2))
     batch_size = wandb.config['batch_size'] 
     n_sigma = 1
     information_dict = {}
@@ -58,14 +55,15 @@ def p2l_algorithm():
         
     # Forward pass of prediction to find on which data we do the most error
     prediction_trainer = get_trainer(accelerator=accelerator)
-    log_metrics(prediction_trainer,
+    validation_loss = log_metrics(prediction_trainer,
                 model,
                 trainset_loader,
                 valset_loader,
                 test_loader,
                 0,
                 len(train_set),
-                n_sigma)
+                n_sigma,
+                return_validation_loss=True)
     errors = prediction_trainer.predict(model=model, dataloaders=trainset_loader)
     z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
     
@@ -78,11 +76,17 @@ def p2l_algorithm():
         add_clamping_to_model(model, config=wandb.config)
 
     max_compression_size = len(train_set) if wandb.config['max_compression_size'] == -1 else wandb.config['max_compression_size']
-
+    early_stopper = StoppingCriterion(max_compression_size,
+                                    stop_criterion=STOP,
+                                    patience=wandb.config['patience'],
+                                    use_early_stopping=wandb.config['early_stopping'],
+                                    use_p2l_stopping=not wandb.config['regression'])
+    
     compression_set_size = dataset_idx.get_compression_size()
 
+    early_stopper.check_stop(loss=validation_loss, max_error=z, compression_set_size=compression_set_size)
     # main loop of p2l
-    while STOP <= z and compression_set_size < max_compression_size:
+    while not early_stopper.stop:
         print(z.item(), compression_set_size)
 
         # update the compression set
@@ -98,7 +102,7 @@ def p2l_algorithm():
                             max_epochs=wandb.config['max_epochs'],
                             callbacks=[EarlyStopping(monitor="validation_loss", mode="min", patience=wandb.config['patience'])])
 
-        trainer.fit(model=model, train_dataloaders=compression_loader, val_dataloaders=valset_loader)
+        trainer.fit(model=model, train_dataloaders=compression_loader, val_dataloaders=valset_loader)   
 
         # predict on the complement set
         complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data())
@@ -110,6 +114,11 @@ def p2l_algorithm():
         idx = dataset_idx.correct_idx(idx)
         
         wandb.log({'max_error': z})
+
+        early_stopper.check_stop(loss=trainer.callback_metrics['validation_loss'],
+                                max_error=z,
+                                compression_set_size=compression_set_size)
+
         # On va tester le modèle sur le complement et validation set, ainsi que calculer les bornes
         # On met le -1 pour qu'il log à l'itération 0, puis à toutes les log_iterations
         if (compression_set_size ) % (wandb.config['data_groupsize'] * wandb.config['log_iterations']) == 0:
@@ -214,6 +223,7 @@ if __name__ == "__main__":
     parser.add_argument('-me', '--max_epochs', type=int, default=1, help="Maximum number of epochs to train the model at each step of P2L.")
     parser.add_argument('-b', '--batch_size', type=int, default=64, help="Batch size used to train the model.")
     parser.add_argument('-dp', '--dropout_probability', type=float, default=0.2, help="Dropout probability for the layers of the model.")
+    parser.add_argument('--early_stopping', action='store_false', help="")
 
     # optimizer
     parser.add_argument('-o', '--optimizer', type=str, default="Adam", help="Optimizer used to train the model.")
@@ -240,8 +250,8 @@ if __name__ == "__main__":
     # bound parameters
     parser.add_argument('-del', '--delta', type=float, default=0.01, help="Delta used to compute the bounds.")
     parser.add_argument('-npb', '--nbr_parameter_bounds', type=int, default=20, help="Number of parameters used to compute the Catoni and linear bounds.")
-    parser.add_argument('--classic_bounds', action='store_false', help="Use if you do not want to compute the classic bounds.")
-    parser.add_argument('--p2l_bounds', action='store_false', help="Use if you do not want to compute the P2L bounds.")
+    parser.add_argument('--classic_bounds', action='store_true', help="Use if you do not want to compute the classic bounds.")
+    parser.add_argument('--p2l_bounds', action='store_true', help="Use if you do not want to compute the P2L bounds.")
     parser.add_argument('--real_bounds', action='store_false', help="Use if you do not want to compute the real valued bounds.")
 
     # miscellaneous
