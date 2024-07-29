@@ -8,9 +8,19 @@ parameters:
   seed:
     values: [1, 2, 3, 4, 42]
   model_type:
-    value: tree
-  max_epochs:
-    value: 1
+    values: [tree, forest]
+  max_depth:
+    values: [5, 10]
+  min_samples_split:
+    values: [2, 3, 4]
+  min_samples_leaf:
+    values: [1, 2, 3]
+  n_estimators:
+    values: [50, 100]
+  ccp_alpha:
+    values: [0.0, 0.01, 0.05]
+  n_add_estimators:
+    value: None
 
 # p2l params
   max_compression_size:
@@ -18,4 +28,4 @@ parameters:
   data_groupsize: 
     value: 1
   patience:
-    value: 3
+    value: 5

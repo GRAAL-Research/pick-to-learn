@@ -27,15 +27,18 @@ class DecisionTree(torch.nn.Module):
         return torch.tensor(self.tree.predict_proba(input))
     
 class RegressionTree(torch.nn.Module):
-    def __init__(self, max_depth=10, min_samples_split=2, min_samples_leaf=1, seed=42):
+    def __init__(self, max_depth=10, min_samples_split=2, min_samples_leaf=1,
+                  seed=42, ccp_alpha=0.0):
         super().__init__()
         self.max_depth = max_depth
         self.seed = seed
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
+        self.ccp_alpha = ccp_alpha
         self.tree = DecisionTreeRegressor(max_depth=self.max_depth,
                                         min_samples_split=self.min_samples_split,
                                         min_samples_leaf=self.min_samples_leaf,
+                                        ccp_alpha=self.ccp_alpha,
                                         random_state=self.seed)
         self.is_fitted = False
 
@@ -52,22 +55,31 @@ class RegressionTree(torch.nn.Module):
     
     def forward(self, input):
         if not self.is_fitted:
-            return torch.ones(input.shape[0])
+            return torch.zeros(input.shape[0])
         input = self.squeeze(input)
         return torch.tensor(self.tree.predict(input))
     
 class RegressionForest(torch.nn.Module):
-    def __init__(self, n_estimators=100, max_depth=10, min_samples_split=2, min_samples_leaf=1, seed=42):
+    def __init__(self, n_estimators=100, max_depth=10, min_samples_split=2,
+                  min_samples_leaf=1, seed=42, n_jobs=5, ccp_alpha=0.0, warm_start=False, n_add_estimators=10):
         super().__init__()
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.seed = seed
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
-        self.forest = RandomForestRegressor(n_estimators=self.n_estimators, 
+        self.n_jobs = n_jobs
+        self.warm_start = warm_start
+        self.ccp_alpha = ccp_alpha
+        self.n_add_estimators = n_add_estimators
+        start_nbr_estimators = self.n_add_estimators if self.warm_start else self.n_estimators
+        self.forest = RandomForestRegressor(n_estimators=start_nbr_estimators, 
                                         max_depth=self.max_depth,
                                         min_samples_split=self.min_samples_split,
                                         min_samples_leaf=self.min_samples_leaf,
+                                        n_jobs=self.n_jobs, 
+                                        warm_start=self.warm_start,
+                                        ccp_alpha=self.ccp_alpha,
                                         random_state=self.seed)
         self.is_fitted = False
 
@@ -77,14 +89,23 @@ class RegressionForest(torch.nn.Module):
             X = X.reshape(1, -1)
         return X
     
+    def set_warm_start(self):
+        if len(self.forest.estimators_) < self.n_estimators:
+            n_estimators = len(self.forest.estimators_) + self.n_add_estimators
+            self.forest.set_params(n_estimators=n_estimators)
+        else:
+            self.forest.set_params(warm_start=False)
+
     def fit(self, X, y):
+        if self.warm_start:
+            self.set_warm_start()
         X = self.squeeze(X)
         self.forest.fit(X, y)
         self.is_fitted = True
     
     def forward(self, input):
         if not self.is_fitted:
-            return torch.ones(input.shape[0])
+            return torch.zeros(input.shape[0])
         input = self.squeeze(input)
         return torch.tensor(self.forest.predict(input))
     

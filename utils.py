@@ -12,7 +12,7 @@ import wandb
 from bounds.real_valued_bounds import compute_real_valued_bounds
 
 class CustomDataset(torch.utils.data.Dataset):
-    def __init__(self, data, targets, indices=None, transform=ToTensor()):
+    def __init__(self, data, targets, indices=None, transform=ToTensor(), real_targets=False):
         """
         Arguments:
             csv_file (string): Path to the csv file with annotations.
@@ -28,12 +28,17 @@ class CustomDataset(torch.utils.data.Dataset):
             self.targets = targets
 
         self.transform = transform
+        self.real_targets = real_targets
 
     def __len__(self) -> int:
         return len(self.data)
 
     def __getitem__(self, idx):
-        img, target = self.data[idx], int(self.targets[idx])
+        img = self.data[idx]
+        if self.real_targets:
+            target = self.targets[idx]
+        else:
+            target = int(self.targets[idx])
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
@@ -78,9 +83,9 @@ def get_max_error_idx(errors, k):
 
 def create_model(config):
     if config.get('prior_size', 0.0) == 0.0:
-        lr = config['training_lr']
+        lr = config.get('training_lr', None)
     else:
-        lr = config['pretraining_lr']
+        lr = config.get('pretraining_lr', None)
 
     if config['dataset'] == "mnist":
         if config['model_type'] == "mlp":
@@ -108,7 +113,7 @@ def create_model(config):
                                                 momentum=config['momentum'],
                                                 batch_size=config['batch_size']
                                                 )
-    elif config['dataset'] == "concrete":
+    elif config['dataset'] in ["concrete", "airfoil", "parkinson", "infrared", "powerplant"]:
         if config['model_type'] == "tree":
             return RegressionTreeModel(RegressionTree(
                 max_depth=config['max_depth'],
@@ -139,17 +144,17 @@ def add_clamping_to_model(model, config) -> None:
 def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : float, validation_size : float):
     if prior_size == 0.0:
         train_data, val_data = torch.utils.data.random_split(dataset, [1-validation_size, validation_size])
-        train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices)
-        validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices)
+        train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices, real_targets=dataset.real_targets)
+        validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices, real_targets=dataset.real_targets)
 
         assert len(train_set) + len(validation_set) == len(dataset)
         return None, train_set, validation_set
     
     splits = [prior_size, 1-prior_size - validation_size, validation_size]
     prior_data, train_data, val_data = torch.utils.data.random_split(dataset, splits)
-    prior_set = CustomDataset(dataset.data, dataset.targets, indices=prior_data.indices)
-    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices)
-    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices)
+    prior_set = CustomDataset(dataset.data, dataset.targets, indices=prior_data.indices, real_targets=dataset.real_targets)
+    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices, real_targets=dataset.real_targets)
+    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices, real_targets=dataset.real_targets)
     
     assert len(prior_set) + len(train_set) + len(validation_set) == len(dataset)
 
@@ -157,8 +162,8 @@ def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : f
 
 def split_train_validation_dataset(dataset : CustomDataset, validation_size : float):
     train_data, val_data = torch.utils.data.random_split(dataset, [1-validation_size, validation_size])
-    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices)
-    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices)
+    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices, real_targets=dataset.real_targets)
+    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices, real_targets=dataset.real_targets)
 
     assert len(train_set) + len(validation_set) == len(dataset)
     return train_set, validation_set

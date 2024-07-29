@@ -1,6 +1,6 @@
 from dataset.mnist import load_binary_mnist, load_low_high_mnist, load_mnist
 from dataset.cifar10 import load_binary_cifar10
-from dataset.regression_datasets import load_concrete
+from dataset.regression_datasets import load_concrete, load_parkinson, load_powerplant, load_infrared, load_airfoil
 
 
 def load_dataset(config):
@@ -23,5 +23,13 @@ def load_dataset(config):
             raise NotImplementedError(f"{config['dataset']} with {config['n_classes']} is not supported.")
     elif config['dataset'] == "concrete":
         return load_concrete(config['test_size'])
+    elif config['dataset'] == "parkinson":
+        return load_parkinson(config['test_size'])
+    elif config['dataset'] == "airfoil":
+        return load_airfoil(config['test_size'])
+    elif config['dataset'] == "infrared":
+        return load_infrared(config['test_size'])
+    elif config['dataset'] == "powerplant":
+        return load_powerplant(config['test_size'])
     else:
         raise NotImplementedError(f"The dataset {config['dataset']} is not supported yet.")

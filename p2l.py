@@ -28,7 +28,7 @@ def p2l_algorithm():
     train_set, test_set = load_dataset(wandb.config)
 
     # Will be used at the end to test the model.
-    test_dataset = CustomDataset(test_set.data, test_set.targets)
+    test_dataset = CustomDataset(test_set.data, test_set.targets, real_targets=wandb.config['regression'])
     # if there is pretraining, train the model on the prior set.
     if wandb.config['prior_size'] != 0.0:
         prior_set, train_set, validation_set = split_prior_train_validation_dataset(train_set, wandb.config['prior_size'], wandb.config['validation_size'])
@@ -53,6 +53,11 @@ def p2l_algorithm():
         prior_trainer = get_trainer(accelerator=accelerator, max_epochs=wandb.config['pretraining_epochs'])
         prior_trainer.fit(model=model, train_dataloaders=prior_loader)
         
+    # Updates the lr, as it might not be the same in the pretraining and training
+    update_learning_rate(model, wandb.config.get('training_lr', None))
+    if wandb.config['clamping']:
+        add_clamping_to_model(model, config=wandb.config)
+    
     # Forward pass of prediction to find on which data we do the most error
     prediction_trainer = get_trainer(accelerator=accelerator)
     validation_loss = log_metrics(prediction_trainer,
@@ -69,11 +74,6 @@ def p2l_algorithm():
     
     # We need to correct the indices, as the continuously changing indices cause index shift
     idx = dataset_idx.correct_idx(idx)
-
-    # Updates the lr, as it might not be the same in the pretraining and training
-    update_learning_rate(model, wandb.config['training_lr'])
-    if wandb.config['clamping']:
-        add_clamping_to_model(model, config=wandb.config)
 
     max_compression_size = len(train_set) if wandb.config['max_compression_size'] == -1 else wandb.config['max_compression_size']
     early_stopper = StoppingCriterion(max_compression_size,
@@ -94,7 +94,7 @@ def p2l_algorithm():
         compression_set_size = dataset_idx.get_compression_size()
 
         # train on the compression set
-        compression_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_compression_data())
+        compression_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_compression_data(), real_targets=wandb.config['regression'])
         
         compression_loader = get_dataloader(dataset=compression_set,
                              batch_size=get_updated_batch_size(batch_size, wandb.config['model_type'], len(compression_set)))
@@ -105,7 +105,7 @@ def p2l_algorithm():
         trainer.fit(model=model, train_dataloaders=compression_loader, val_dataloaders=valset_loader)   
 
         # predict on the complement set
-        complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data())
+        complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data(), real_targets=wandb.config['regression'])
         complement_loader = get_dataloader(dataset=complement_set, batch_size=batch_size)
         errors = prediction_trainer.predict(model=model, dataloaders=complement_loader)
         z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
@@ -135,7 +135,7 @@ def p2l_algorithm():
     print(f"P2l ended with max error {z.item():.2f} and a compression set of size {compression_set_size}")
 
     # Test the model on the complement set
-    complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data())
+    complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data(), real_targets=wandb.config['regression'])
     complement_loader = get_dataloader(dataset=complement_set, batch_size=batch_size)
     complement_results = prediction_trainer.validate(model, dataloaders=complement_loader)
 
@@ -241,11 +241,16 @@ if __name__ == "__main__":
     parser.add_argument('-miv', '--min_val', type=float, default=0, help=" ")
     parser.add_argument('-mav', '--max_val', type=float, default=90, help=" ")
     
-    # tree parameters (only used if model_type == "tree")
+    # tree parameters (only used if model_type in ["tree", "forest"] )
     parser.add_argument('-mxd', '--max_depth', type=int, default=10, help="Max depth of the tree.")
     parser.add_argument('-mss', '--min_samples_split', type=int, default=2)
     parser.add_argument('-msl', '--min_samples_leaf', type=int, default=1)
+    parser.add_argument('-ca', '--ccp_alpha', type=float, default=0.0)
+
+    # forest parameters (only used if model_type == "forest")
     parser.add_argument('-nes', '--n_estimators', type=int, default=100)
+    parser.add_argument('-nj', '--n_jobs', type=int, default=5)
+    parser.add_argument('--warm_start', action='store_true')
 
     # bound parameters
     parser.add_argument('-del', '--delta', type=float, default=0.01, help="Delta used to compute the bounds.")
