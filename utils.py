@@ -1,15 +1,18 @@
 import torch
+import lightning as L
 from PIL import Image
 import torch.utils
 from torchvision.transforms import ToTensor
 from models.linear_network import MnistMlp
 from models.convolutional_network import MnistCnn, Cifar10Cnn9l
-from models.lightning_model import ClassificationModel
-from models.decision_tree import DecisionTree, DecisionTreeModel
+from models.classification_model import ClassificationModel
+from models.decision_tree import RegressionTree, RegressionTreeModel, RegressionForest
 from itertools import product
+import wandb
+from bounds.real_valued_bounds import compute_real_valued_bounds
 
 class CustomDataset(torch.utils.data.Dataset):
-    def __init__(self, data, targets, indices=None, transform=ToTensor()):
+    def __init__(self, data, targets, indices=None, transform=ToTensor(), real_targets=False):
         """
         Arguments:
             csv_file (string): Path to the csv file with annotations.
@@ -25,12 +28,17 @@ class CustomDataset(torch.utils.data.Dataset):
             self.targets = targets
 
         self.transform = transform
+        self.real_targets = real_targets
 
     def __len__(self) -> int:
         return len(self.data)
 
     def __getitem__(self, idx):
-        img, target = self.data[idx], int(self.targets[idx])
+        img = self.data[idx]
+        if self.real_targets:
+            target = self.targets[idx]
+        else:
+            target = int(self.targets[idx])
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
@@ -75,9 +83,9 @@ def get_max_error_idx(errors, k):
 
 def create_model(config):
     if config.get('prior_size', 0.0) == 0.0:
-        lr = config['training_lr']
+        lr = config.get('training_lr', None)
     else:
-        lr = config['pretraining_lr']
+        lr = config.get('pretraining_lr', None)
 
     if config['dataset'] == "mnist":
         if config['model_type'] == "mlp":
@@ -105,37 +113,48 @@ def create_model(config):
                                                 momentum=config['momentum'],
                                                 batch_size=config['batch_size']
                                                 )
-    # elif config['model_type'] == "tree":
-    #     return DecisionTreeModel(DecisionTree(
-    #         n_classes=config['n_classes'],
-    #         max_depth=config['max_depth'],
-    #         min_samples_split=config['min_samples_split'],
-    #         min_samples_leaf=config['min_samples_leaf'],
-    #         seed=config['seed']
-    #     ))
+    elif config['dataset'] in ["concrete", "airfoil", "parkinson", "infrared", "powerplant"]:
+        if config['model_type'] == "tree":
+            return RegressionTreeModel(RegressionTree(
+                max_depth=config['max_depth'],
+                min_samples_split=config['min_samples_split'],
+                min_samples_leaf=config['min_samples_leaf'],
+                seed=config['seed']
+            ))
+        elif config['model_type'] == "forest":
+            return RegressionTreeModel(RegressionForest(
+                n_estimators=config['n_estimators'],
+                max_depth=config['max_depth'],
+                min_samples_split=config['min_samples_split'],
+                min_samples_leaf=config['min_samples_leaf'],
+                seed=config['seed']
+            ))
     
     raise NotImplementedError(f"Model type = {config['model_type']} with dataset {config['dataset']} is not implemented yet.")
 
 def update_learning_rate(model, lr:float) -> None:
     model.lr = lr
 
-def add_clamping_to_model(model, pmin: float = 1e-5) -> None:
-    model.configure_loss(clamping=True, pmin=pmin)
+def add_clamping_to_model(model, config) -> None:
+    if config['regression']:
+        model.configure_loss(clamping=True, min_val=config['min_val'], max_val=config['max_val'])
+    else:
+        model.configure_loss(clamping=True, pmin=config['min_probability'])
 
 def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : float, validation_size : float):
     if prior_size == 0.0:
         train_data, val_data = torch.utils.data.random_split(dataset, [1-validation_size, validation_size])
-        train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices)
-        validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices)
+        train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices, real_targets=dataset.real_targets)
+        validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices, real_targets=dataset.real_targets)
 
         assert len(train_set) + len(validation_set) == len(dataset)
         return None, train_set, validation_set
     
     splits = [prior_size, 1-prior_size - validation_size, validation_size]
     prior_data, train_data, val_data = torch.utils.data.random_split(dataset, splits)
-    prior_set = CustomDataset(dataset.data, dataset.targets, indices=prior_data.indices)
-    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices)
-    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices)
+    prior_set = CustomDataset(dataset.data, dataset.targets, indices=prior_data.indices, real_targets=dataset.real_targets)
+    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices, real_targets=dataset.real_targets)
+    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices, real_targets=dataset.real_targets)
     
     assert len(prior_set) + len(train_set) + len(validation_set) == len(dataset)
 
@@ -143,8 +162,8 @@ def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : f
 
 def split_train_validation_dataset(dataset : CustomDataset, validation_size : float):
     train_data, val_data = torch.utils.data.random_split(dataset, [1-validation_size, validation_size])
-    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices)
-    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices)
+    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices, real_targets=dataset.real_targets)
+    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices, real_targets=dataset.real_targets)
 
     assert len(train_set) + len(validation_set) == len(dataset)
     return train_set, validation_set
@@ -202,10 +221,109 @@ def get_exp_file_name(config):
     file_name += ".json"
     return "./experiment_logs/" + file_name
 
-def get_updated_batch_size(batch_size, dataset_length):
+def get_updated_batch_size(batch_size, model_type, dataset_length):
     """
     When batch_size == -1, we want to train on the whole dataset.
     """
-    if batch_size == -1:
+    if model_type in ['tree', 'forest']:
         return dataset_length
     return batch_size
+
+def get_dataloader(dataset, batch_size, shuffle=False, num_workers=5, persistent_workers=True):
+    return torch.utils.data.DataLoader(dataset,
+                                        batch_size=batch_size,
+                                        shuffle=shuffle,
+                                        num_workers=num_workers, 
+                                        persistent_workers=persistent_workers)
+
+def get_trainer(accelerator='auto', devices=1, max_epochs=None, logger=False,
+                enable_checkpointing=False, callbacks=None):
+    return L.Trainer(accelerator=accelerator,
+                     devices=devices,
+                    max_epochs=max_epochs,
+                    logger=logger,
+                    enable_checkpointing=enable_checkpointing,
+                    callbacks=callbacks)
+
+def get_accelerator(model_type:str):
+    return 'cpu' if model_type in ["tree", 'forest'] else 'auto'
+
+def log_metrics(trainer, model, complement_loader, valset_loader, test_loader, compression_set_length, train_set_length, n_sigma, return_validation_loss=False):
+    complement_res = trainer.validate(model=model, dataloaders=complement_loader)
+    validation_res = trainer.validate(model=model, dataloaders=valset_loader)
+    test_results = trainer.test(model, dataloaders=test_loader)
+
+    if wandb.config['regression']:
+        metrics = {'complement_loss' : complement_res[0]['validation_loss'],
+                'validation_loss': validation_res[0]['validation_loss'],
+                'test_loss': test_results[0]['test_loss']}
+
+        compute_real_valued_bounds(compression_set_length,
+                                    n_sigma,
+                                    train_set_length,
+                                    complement_res[0]['validation_loss'],
+                                    wandb.config['delta'],
+                                    wandb.config['nbr_parameter_bounds'],
+                                    metrics,
+                                    min_val=wandb.config['min_val'],
+                                    max_val=wandb.config['max_val'])
+        wandb.log(metrics)
+    else:
+        metrics = {'complement_error' : complement_res[0]['validation_error'],
+                'validation_error': validation_res[0]['validation_error'],
+                'test_error': test_results[0]['test_error']}
+
+        compute_real_valued_bounds(compression_set_length,
+                                    n_sigma,
+                                    train_set_length,
+                                    complement_res[0]['validation_error'],
+                                    wandb.config['delta'],
+                                    wandb.config['nbr_parameter_bounds'],
+                                    metrics)
+
+    if return_validation_loss:
+        return complement_res[0]['validation_loss']
+
+class StoppingCriterion:
+
+    def __init__(self, max_compression_set_size, stop_criterion=torch.log(torch.tensor(2)),  patience=3,
+                  use_early_stopping=True, use_p2l_stopping=True):
+        
+        self.max_compression_set_size = max_compression_set_size
+        try:
+            self.stop_criterion = stop_criterion.item()
+        except AttributeError:
+            self.stop_criterion = stop_criterion
+        self.patience = patience
+        self.use_early_stopping = use_early_stopping
+        self.use_p2l_stopping= use_p2l_stopping
+        self.iterations = 0
+        self.min_loss = torch.inf
+        self.stop = False
+
+    def check_early_stop(self, loss):
+        if not self.use_early_stopping:
+            return True
+        
+        if loss < self.min_loss:
+            self.min_loss = loss
+            self.iterations = 0
+            return True
+        
+        self.iterations += 1
+        return not (self.iterations >= self.patience)
+    
+    def check_p2l_stop(self, max_error):
+        return self.stop_criterion <= max_error
+    
+    def check_compression_set_stop(self, compression_set_size):
+        return compression_set_size < self.max_compression_set_size
+    
+    def check_stop(self, loss, max_error, compression_set_size):
+        self.stop = not (self.check_early_stop(loss)
+                    and self.check_p2l_stop(max_error)
+                    and self.check_compression_set_stop(compression_set_size)
+                    )
+
+
+        

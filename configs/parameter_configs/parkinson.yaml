@@ -1,0 +1,25 @@
+dataset: "parkinson"
+regression: True
+prior_size: 0.0
+validation_size: 0.1
+test_size: 0.1
+max_epochs: 1
+batch_size: 64
+
+
+# bound parameters
+delta: 0.01
+nbr_parameter_bounds: 20
+classic_bounds: True
+p2l_bounds: True
+real_bounds: True
+
+# miscellaneous
+n_jobs: 5
+warm_start: False
+log_iterations: 5
+deterministic: True
+clamping: True
+early_stopping: True
+min_val: 0
+max_val: 45
