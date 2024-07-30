@@ -290,6 +290,7 @@ def log_metrics(trainer, model, complement_loader, valset_loader, test_loader, c
                                     wandb.config['delta'],
                                     wandb.config['nbr_parameter_bounds'],
                                     metrics)
+        wandb.log(metrics)
 
     if return_validation_loss:
         return complement_res[0]['validation_loss']
