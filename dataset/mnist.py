@@ -18,8 +18,8 @@ def load_binary_mnist(low=1, high=7):
 
     assert test_set.data.shape[0] == test_set.targets.shape[0]
 
-    train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform)
-    test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform)
+    train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform, real_targets=False, is_an_image=True)
+    test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform, real_targets=False, is_an_image=True)
 
     return train_dataset, test_dataset
 
@@ -33,8 +33,8 @@ def load_low_high_mnist():
     test_set = MNIST(root="MNIST", download=True, train=False, transform=transform)
     test_set.targets = (test_set.targets > separator).to(int)
 
-    train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform)
-    test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform)
+    train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform, real_targets=False, is_an_image=True)
+    test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform, real_targets=False, is_an_image=True)
 
     return train_dataset, test_dataset
 
@@ -43,8 +43,8 @@ def load_mnist():
     train_set = MNIST(root="MNIST", download=True, train=True, transform=transform)
     test_set = MNIST(root="MNIST", download=True, train=False, transform=transform)
 
-    train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform)
-    test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform)
+    train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform, real_targets=False, is_an_image=True)
+    test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform, real_targets=False, is_an_image=True)
 
     return train_dataset, test_dataset
 

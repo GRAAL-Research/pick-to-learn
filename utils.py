@@ -5,6 +5,7 @@ import torch.utils
 from torchvision.transforms import ToTensor
 from models.linear_network import MnistMlp
 from models.convolutional_network import MnistCnn, Cifar10Cnn9l
+from models.transformer import DistilBert
 from models.classification_model import ClassificationModel
 from models.decision_tree import RegressionTree, RegressionTreeModel, RegressionForest
 from itertools import product
@@ -12,7 +13,7 @@ import wandb
 from bounds.real_valued_bounds import compute_real_valued_bounds
 
 class CustomDataset(torch.utils.data.Dataset):
-    def __init__(self, data, targets, indices=None, transform=ToTensor(), real_targets=False):
+    def __init__(self, data, targets, indices=None, transform=ToTensor(), real_targets=False, is_an_image=True):
         """
         Arguments:
             csv_file (string): Path to the csv file with annotations.
@@ -21,7 +22,12 @@ class CustomDataset(torch.utils.data.Dataset):
                 on a sample.
         """
         if indices is not None:
-            self.data = data[indices]
+            if isinstance(data, list):
+                self.data = []
+                for i in indices:
+                    self.data.append(data[i])
+            else:
+                self.data = data[indices]
             self.targets = targets[indices]
         else:
             self.data = data
@@ -29,6 +35,7 @@ class CustomDataset(torch.utils.data.Dataset):
 
         self.transform = transform
         self.real_targets = real_targets
+        self.is_an_image = is_an_image
 
     def __len__(self) -> int:
         return len(self.data)
@@ -40,14 +47,23 @@ class CustomDataset(torch.utils.data.Dataset):
         else:
             target = int(self.targets[idx])
 
-        # doing this so that it is consistent with all other datasets
-        # to return a PIL Image
-        img = Image.fromarray(img.numpy()) #, mode="L")
+        if self.is_an_image:
+            # doing this so that it is consistent with all other datasets
+            # to return a PIL Image
+            img = Image.fromarray(img.numpy()) #, mode="L")
 
         if self.transform is not None:
             img = self.transform(img)
 
         return img, target
+
+    def clone_dataset(self, indices):
+        return CustomDataset(data=self.data,
+                            targets=self.targets,
+                            indices=indices,
+                            transform=self.transform,
+                            real_targets=self.real_targets,
+                            is_an_image=self.is_an_image)
 
 class CompressionSetIndexes(torch.Tensor):
     def __init__(self, n : int ):
@@ -113,6 +129,14 @@ def create_model(config):
                                                 momentum=config['momentum'],
                                                 batch_size=config['batch_size']
                                                 )
+    elif config['dataset'] == "amazon":
+        if config['model_type'] == "transformer":
+            return ClassificationModel(DistilBert(n_classes=config['n_classes'],
+                                                dropout_probability=config['dropout_probability']),
+                                    optimizer=config['optimizer'],
+                                    lr=lr,
+                                    momentum=config['momentum'],
+                                    batch_size=config['batch_size'])
     elif config['dataset'] in ["concrete", "airfoil", "parkinson", "infrared", "powerplant"]:
         if config['model_type'] == "tree":
             return RegressionTreeModel(RegressionTree(
@@ -154,17 +178,17 @@ def add_clamping_to_model(model, config) -> None:
 def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : float, validation_size : float):
     if prior_size == 0.0:
         train_data, val_data = torch.utils.data.random_split(dataset, [1-validation_size, validation_size])
-        train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices, real_targets=dataset.real_targets)
-        validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices, real_targets=dataset.real_targets)
+        train_set = dataset.clone_dataset(train_data.indices)
+        validation_set = dataset.clone_dataset(val_data.indices)
 
         assert len(train_set) + len(validation_set) == len(dataset)
         return None, train_set, validation_set
     
     splits = [prior_size, 1-prior_size - validation_size, validation_size]
     prior_data, train_data, val_data = torch.utils.data.random_split(dataset, splits)
-    prior_set = CustomDataset(dataset.data, dataset.targets, indices=prior_data.indices, real_targets=dataset.real_targets)
-    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices, real_targets=dataset.real_targets)
-    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices, real_targets=dataset.real_targets)
+    prior_set = dataset.clone_dataset(prior_data.indices)
+    train_set = dataset.clone_dataset(train_data.indices)
+    validation_set = dataset.clone_dataset(val_data.indices)
     
     assert len(prior_set) + len(train_set) + len(validation_set) == len(dataset)
 
@@ -172,8 +196,8 @@ def split_prior_train_validation_dataset(dataset : CustomDataset, prior_size : f
 
 def split_train_validation_dataset(dataset : CustomDataset, validation_size : float):
     train_data, val_data = torch.utils.data.random_split(dataset, [1-validation_size, validation_size])
-    train_set = CustomDataset(dataset.data, dataset.targets, indices=train_data.indices, real_targets=dataset.real_targets)
-    validation_set = CustomDataset(dataset.data, dataset.targets, indices=val_data.indices, real_targets=dataset.real_targets)
+    train_set = dataset.clone_dataset(train_data.indices)
+    validation_set = dataset.clone_dataset(val_data.indices)
 
     assert len(train_set) + len(validation_set) == len(dataset)
     return train_set, validation_set
@@ -290,6 +314,7 @@ def log_metrics(trainer, model, complement_loader, valset_loader, test_loader, c
                                     wandb.config['delta'],
                                     wandb.config['nbr_parameter_bounds'],
                                     metrics)
+        wandb.log(metrics)
 
     if return_validation_loss:
         return complement_res[0]['validation_loss']

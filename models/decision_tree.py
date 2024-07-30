@@ -49,14 +49,14 @@ class RegressionTree(torch.nn.Module):
         return X
     
     def fit(self, X, y):
-        X = self.squeeze(X)
+        # X = self.squeeze(X)
         self.tree.fit(X, y)
         self.is_fitted = True
     
     def forward(self, input):
         if not self.is_fitted:
             return torch.zeros(input.shape[0])
-        input = self.squeeze(input)
+        # input = self.squeeze(input)
         return torch.tensor(self.tree.predict(input))
     
 class RegressionForest(torch.nn.Module):
