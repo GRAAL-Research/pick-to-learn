@@ -11,7 +11,7 @@ def load_uci_repo(id:int, test_size:float=0.1, target_name=None):
         y = torch.tensor(uci_dataset.data.targets.to_numpy())
     else:
         y = torch.tensor(uci_dataset.data.targets[target_name].to_numpy())
-    dataset = CustomDataset(X, y.reshape(-1,), real_targets=True)
+    dataset = CustomDataset(X, y.reshape(-1,), transform=None, real_targets=True, is_an_image=False)
     return split_train_validation_dataset(dataset, test_size)
 
 
@@ -37,6 +37,6 @@ def load_infrared(test_size: float = 0.1):
     X = pd.get_dummies(uci_dataset.data.features, columns=["Gender", 'Ethnicity', 'Age'])
     X = torch.tensor(X.to_numpy(dtype=np.float64))
     y = torch.tensor(uci_dataset.data.targets['aveOralF'].to_numpy())
-    dataset = CustomDataset(X, y.reshape(-1,), real_targets=True)
+    dataset = CustomDataset(X, y.reshape(-1,), real_targets=True, is_an_image=False)
     return split_train_validation_dataset(dataset, test_size)
 

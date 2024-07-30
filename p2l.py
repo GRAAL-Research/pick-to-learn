@@ -27,8 +27,6 @@ def p2l_algorithm():
     # Load dataset and split it if necessary
     train_set, test_set = load_dataset(wandb.config)
 
-    # Will be used at the end to test the model.
-    test_dataset = CustomDataset(test_set.data, test_set.targets, real_targets=wandb.config['regression'])
     # if there is pretraining, train the model on the prior set.
     if wandb.config['prior_size'] != 0.0:
         prior_set, train_set, validation_set = split_prior_train_validation_dataset(train_set, wandb.config['prior_size'], wandb.config['validation_size'])
@@ -38,7 +36,7 @@ def p2l_algorithm():
     # We check everything is a CustomDataset and will work correctly
     assert isinstance(train_set, CustomDataset)
     assert isinstance(validation_set, CustomDataset)
-    assert isinstance(test_dataset, CustomDataset)
+    assert isinstance(test_set, CustomDataset)
 
     # Instantiate the mask that will deal with the indexes
     dataset_idx = CompressionSetIndexes(len(train_set))
@@ -46,7 +44,7 @@ def p2l_algorithm():
     # create the dataloaders for the validation and test data. 
     trainset_loader = get_dataloader(dataset=train_set, batch_size=batch_size)
     valset_loader = get_dataloader(dataset=validation_set, batch_size=batch_size)
-    test_loader = get_dataloader(dataset=test_dataset, batch_size=batch_size)
+    test_loader = get_dataloader(dataset=test_set, batch_size=batch_size)
 
     ######################## MODEL ########################
     if wandb.config['prior_size'] == 0.0:
@@ -56,7 +54,7 @@ def p2l_algorithm():
         if not os.path.isdir(file_path):
             os.mkdir(file_path)
             
-        model_name = f"prior_model_{wandb.config['prior_size']}_{wandb.config['pretraining_lr']}_{wandb.config['pretraining_epochs']}.ckpt"
+        model_name = f"prior_model_{wandb.config['model_type']}_{wandb.config['prior_size']}_{wandb.config['pretraining_lr']}_{wandb.config['pretraining_epochs']}.ckpt"
         file_path = file_path + model_name
         if os.path.isfile(file_path):
             model = load_pretrained_model(file_path, wandb.config)
@@ -108,7 +106,7 @@ def p2l_algorithm():
         compression_set_size = dataset_idx.get_compression_size()
 
         # train on the compression set
-        compression_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_compression_data(), real_targets=wandb.config['regression'])
+        compression_set = train_set.clone_dataset(dataset_idx.get_compression_data())
         
         compression_loader = get_dataloader(dataset=compression_set,
                              batch_size=get_updated_batch_size(batch_size, wandb.config['model_type'], len(compression_set)))
@@ -119,7 +117,7 @@ def p2l_algorithm():
         trainer.fit(model=model, train_dataloaders=compression_loader, val_dataloaders=valset_loader)   
 
         # predict on the complement set
-        complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data(), real_targets=wandb.config['regression'])
+        complement_set = train_set.clone_dataset(dataset_idx.get_complement_data())
         complement_loader = get_dataloader(dataset=complement_set, batch_size=batch_size)
         errors = prediction_trainer.predict(model=model, dataloaders=complement_loader)
         z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
@@ -149,7 +147,7 @@ def p2l_algorithm():
     print(f"P2l ended with max error {z.item():.2f} and a compression set of size {compression_set_size}")
 
     # Test the model on the complement set
-    complement_set = CustomDataset(train_set.data, train_set.targets, indices=dataset_idx.get_complement_data(), real_targets=wandb.config['regression'])
+    complement_set = train_set.clone_dataset(dataset_idx.get_complement_data())
     complement_loader = get_dataloader(dataset=complement_set, batch_size=batch_size)
     complement_results = prediction_trainer.validate(model, dataloaders=complement_loader)
 
@@ -218,22 +216,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # dataset details 
-    parser.add_argument('-d', '--dataset', type=str, default="mnist", help="Name of the dataset.")
+    parser.add_argument('-d', '--dataset', type=str, default="amazon", help="Name of the dataset.")
     parser.add_argument('-r', '--regression', action='store_true', help="If the dataset is a regression problem.")
-    parser.add_argument('-nc', '--n_classes', type=int, default=10, help="Number of classes used in the training set.")
+    parser.add_argument('-nc', '--n_classes', type=int, default=2, help="Number of classes used in the training set.")
     parser.add_argument('-f', '--first_class', type=int, default=-1,
                  help="When the problem is binary classification, the first class used in the training set. Use -1 for low_high problems. The second class is ignored.")
     parser.add_argument('-s', '--second_class', type=int, default=-1, help="When the problem is binary classification, the second class used in the training set.")
 
     # pretraining details
-    parser.add_argument('-p', '--prior_size', type=float, default=0.2, help="Portion of the training set that is used to pre-train the model.")
+    parser.add_argument('-p', '--prior_size', type=float, default=0.0, help="Portion of the training set that is used to pre-train the model.")
     parser.add_argument('-v', '--validation_size', type=float, default=0.1, help="Portion of the dataset that is used to validate the model.")
     parser.add_argument('-t', '--test_size', type=float, default=0.1, help="Portion of the dataset that is used to test the model, when the test dataset is not defined.")
     parser.add_argument('-pti', '--pretraining_epochs', type=int, default=50, help="Number of epochs used to pretrain the model.")
     parser.add_argument('-plr', '--pretraining_lr', type=float, default=1e-3, help="Learning rate used by the optimizer to pretrain the model.")
 
     # training details
-    parser.add_argument('-m', '--model_type', type=str, default="cnn", help="Type of model to train.")
+    parser.add_argument('-m', '--model_type', type=str, default="transformer", help="Type of model to train.")
     parser.add_argument('-me', '--max_epochs', type=int, default=1, help="Maximum number of epochs to train the model at each step of P2L.")
     parser.add_argument('-b', '--batch_size', type=int, default=64, help="Batch size used to train the model.")
     parser.add_argument('-dp', '--dropout_probability', type=float, default=0.2, help="Dropout probability for the layers of the model.")

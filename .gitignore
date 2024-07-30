@@ -168,3 +168,4 @@ baseline_logs/
 cifar10/
 results/
 prior_models/
+amazon_polarity/

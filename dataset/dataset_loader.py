@@ -1,6 +1,7 @@
 from dataset.mnist import load_binary_mnist, load_low_high_mnist, load_mnist
 from dataset.cifar10 import load_binary_cifar10
 from dataset.regression_datasets import load_concrete, load_parkinson, load_powerplant, load_infrared, load_airfoil
+from dataset.amazon_polarity import load_amazon_polarity
 
 
 def load_dataset(config):
@@ -31,5 +32,7 @@ def load_dataset(config):
         return load_infrared(config['test_size'])
     elif config['dataset'] == "powerplant":
         return load_powerplant(config['test_size'])
+    elif config['dataset'] == "amazon":
+        return load_amazon_polarity()
     else:
         raise NotImplementedError(f"The dataset {config['dataset']} is not supported yet.")
