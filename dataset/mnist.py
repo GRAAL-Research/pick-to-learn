@@ -21,7 +21,8 @@ def load_binary_mnist(low=1, high=7):
     train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform, real_targets=False, is_an_image=True)
     test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform, real_targets=False, is_an_image=True)
 
-    return train_dataset, test_dataset
+    collate_fn = None
+    return train_dataset, test_dataset, collate_fn
 
 def load_low_high_mnist():
     separator = 4
@@ -36,7 +37,8 @@ def load_low_high_mnist():
     train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform, real_targets=False, is_an_image=True)
     test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform, real_targets=False, is_an_image=True)
 
-    return train_dataset, test_dataset
+    collate_fn = None
+    return train_dataset, test_dataset, collate_fn
 
 def load_mnist():
     transform = ToTensor()
@@ -46,7 +48,8 @@ def load_mnist():
     train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform, real_targets=False, is_an_image=True)
     test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform, real_targets=False, is_an_image=True)
 
-    return train_dataset, test_dataset
+    collate_fn = None
+    return train_dataset, test_dataset, collate_fn
 
 
 if __name__ == "__main__":

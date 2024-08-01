@@ -30,7 +30,8 @@ def load_binary_cifar10(low=1, high=7):
     train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform, real_targets=False, is_an_image=True)
     test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform, real_targets=False, is_an_image=True)
 
-    return train_dataset, test_dataset
+    collate_fn = None
+    return train_dataset, test_dataset, collate_fn
 
 def load_cifar10():
     transform = transforms.Compose(
@@ -43,7 +44,8 @@ def load_cifar10():
     train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform, real_targets=False, is_an_image=True)
     test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform, real_targets=False, is_an_image=True)
 
-    return train_dataset, test_dataset
+    collate_fn = None
+    return train_dataset, test_dataset, collate_fn
 
 if __name__ == "__main__":
     load_binary_cifar10()

@@ -10,8 +10,8 @@ batch_size: 64
 # bound parameters
 delta: 0.01
 nbr_parameter_bounds: 20
-classic_bounds: True
-p2l_bounds: True
+classic_bounds: False
+p2l_bounds: False
 real_bounds: True
 
 # miscellaneous
