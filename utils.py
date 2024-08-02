@@ -5,7 +5,7 @@ import torch.utils
 from torchvision.transforms import ToTensor
 from models.linear_network import MnistMlp
 from models.convolutional_network import MnistCnn, Cifar10Cnn9l
-from models.transformer import DistilBert
+from models.transformer import DistilBert, ClassificationTransformerModel
 from models.classification_model import ClassificationModel
 from models.decision_tree import RegressionTree, RegressionTreeModel, RegressionForest
 from itertools import product
@@ -131,7 +131,7 @@ def create_model(config):
                                                 )
     elif config['dataset'] == "amazon":
         if config['model_type'] == "transformer":
-            return ClassificationModel(DistilBert(n_classes=config['n_classes'],
+            return ClassificationTransformerModel(DistilBert(n_classes=config['n_classes'],
                                                 dropout_probability=config['dropout_probability']),
                                     optimizer=config['optimizer'],
                                     lr=lr,
@@ -263,12 +263,13 @@ def get_updated_batch_size(batch_size, model_type, dataset_length):
         return dataset_length
     return batch_size
 
-def get_dataloader(dataset, batch_size, shuffle=False, num_workers=5, persistent_workers=True):
+def get_dataloader(dataset, batch_size, shuffle=False, num_workers=5, persistent_workers=True, collate_fn=None):
     return torch.utils.data.DataLoader(dataset,
                                         batch_size=batch_size,
                                         shuffle=shuffle,
                                         num_workers=num_workers, 
-                                        persistent_workers=persistent_workers)
+                                        persistent_workers=persistent_workers, 
+                                        collate_fn=collate_fn)
 
 def get_trainer(accelerator='auto', devices=1, max_epochs=None, logger=False,
                 enable_checkpointing=False, callbacks=None):

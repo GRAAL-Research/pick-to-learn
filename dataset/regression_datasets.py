@@ -3,16 +3,29 @@ from utils import CustomDataset, split_train_validation_dataset
 import torch
 import pandas as pd
 import numpy as np
+import time
+
+def fetch_repo(id):
+    while True:
+        try:
+            uci_dataset = fetch_ucirepo(id=id)
+            break
+        except ConnectionError:
+            time.sleep(5)
+    return uci_dataset
+
 
 def load_uci_repo(id:int, test_size:float=0.1, target_name=None):
-    uci_dataset = fetch_ucirepo(id=id)
+    uci_dataset = fetch_repo(id=id)
     X = torch.tensor(uci_dataset.data.features.to_numpy())
     if target_name is None:
         y = torch.tensor(uci_dataset.data.targets.to_numpy())
     else:
         y = torch.tensor(uci_dataset.data.targets[target_name].to_numpy())
     dataset = CustomDataset(X, y.reshape(-1,), transform=None, real_targets=True, is_an_image=False)
-    return split_train_validation_dataset(dataset, test_size)
+    train_set, test_set = split_train_validation_dataset(dataset, test_size)
+    collate_fn = None
+    return train_set, test_set, collate_fn
 
 
 def load_concrete(test_size:float=0.1):
@@ -33,10 +46,12 @@ def load_powerplant(test_size: float = 0.1):
 
 def load_infrared(test_size: float = 0.1):
     # https://archive.ics.uci.edu/dataset/925/infrared+thermography+temperature+dataset
-    uci_dataset = fetch_ucirepo(id=925)
+    uci_dataset = fetch_repo(id=925)
     X = pd.get_dummies(uci_dataset.data.features, columns=["Gender", 'Ethnicity', 'Age'])
     X = torch.tensor(X.to_numpy(dtype=np.float64))
     y = torch.tensor(uci_dataset.data.targets['aveOralF'].to_numpy())
     dataset = CustomDataset(X, y.reshape(-1,), real_targets=True, is_an_image=False)
-    return split_train_validation_dataset(dataset, test_size)
+    train_set, test_set = split_train_validation_dataset(dataset, test_size)
+    collate_fn = None
+    return train_set, test_set, collate_fn
 

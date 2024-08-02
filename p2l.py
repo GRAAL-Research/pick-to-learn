@@ -25,7 +25,7 @@ def p2l_algorithm():
 
     ######################## DATASET ########################
     # Load dataset and split it if necessary
-    train_set, test_set = load_dataset(wandb.config)
+    train_set, test_set, collate_fn = load_dataset(wandb.config)
 
     # if there is pretraining, train the model on the prior set.
     if wandb.config['prior_size'] != 0.0:
@@ -42,9 +42,9 @@ def p2l_algorithm():
     dataset_idx = CompressionSetIndexes(len(train_set))
     
     # create the dataloaders for the validation and test data. 
-    trainset_loader = get_dataloader(dataset=train_set, batch_size=batch_size)
-    valset_loader = get_dataloader(dataset=validation_set, batch_size=batch_size)
-    test_loader = get_dataloader(dataset=test_set, batch_size=batch_size)
+    trainset_loader = get_dataloader(dataset=train_set, batch_size=batch_size, collate_fn=collate_fn)
+    valset_loader = get_dataloader(dataset=validation_set, batch_size=batch_size, collate_fn=collate_fn)
+    test_loader = get_dataloader(dataset=test_set, batch_size=batch_size, collate_fn=collate_fn)
 
     ######################## MODEL ########################
     if wandb.config['prior_size'] == 0.0:
@@ -60,7 +60,7 @@ def p2l_algorithm():
             model = load_pretrained_model(file_path, wandb.config)
         else:
             model = create_model(wandb.config)
-            prior_loader= get_dataloader(dataset=prior_set, batch_size=batch_size)
+            prior_loader= get_dataloader(dataset=prior_set, batch_size=batch_size, collate_fn=collate_fn)
             prior_trainer = get_trainer(accelerator=accelerator, max_epochs=wandb.config['pretraining_epochs'])
             prior_trainer.fit(model=model, train_dataloaders=prior_loader)
             prior_trainer.save_checkpoint(file_path)
@@ -109,7 +109,8 @@ def p2l_algorithm():
         compression_set = train_set.clone_dataset(dataset_idx.get_compression_data())
         
         compression_loader = get_dataloader(dataset=compression_set,
-                             batch_size=get_updated_batch_size(batch_size, wandb.config['model_type'], len(compression_set)))
+                             batch_size=get_updated_batch_size(batch_size, wandb.config['model_type'], len(compression_set)),
+                             collate_fn=collate_fn)
         trainer = get_trainer(accelerator=accelerator,
                             max_epochs=wandb.config['max_epochs'],
                             callbacks=[EarlyStopping(monitor="validation_loss", mode="min", patience=wandb.config['patience'])])
@@ -118,7 +119,7 @@ def p2l_algorithm():
 
         # predict on the complement set
         complement_set = train_set.clone_dataset(dataset_idx.get_complement_data())
-        complement_loader = get_dataloader(dataset=complement_set, batch_size=batch_size)
+        complement_loader = get_dataloader(dataset=complement_set, batch_size=batch_size, collate_fn=collate_fn)
         errors = prediction_trainer.predict(model=model, dataloaders=complement_loader)
         z, idx = get_max_error_idx(errors, wandb.config['data_groupsize'])
 
@@ -148,7 +149,7 @@ def p2l_algorithm():
 
     # Test the model on the complement set
     complement_set = train_set.clone_dataset(dataset_idx.get_complement_data())
-    complement_loader = get_dataloader(dataset=complement_set, batch_size=batch_size)
+    complement_loader = get_dataloader(dataset=complement_set, batch_size=batch_size, collate_fn=collate_fn)
     complement_results = prediction_trainer.validate(model, dataloaders=complement_loader)
 
     # Test the model on the validation and test sets
@@ -224,7 +225,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--second_class', type=int, default=-1, help="When the problem is binary classification, the second class used in the training set.")
 
     # pretraining details
-    parser.add_argument('-p', '--prior_size', type=float, default=0.0, help="Portion of the training set that is used to pre-train the model.")
+    parser.add_argument('-p', '--prior_size', type=float, default=0.1, help="Portion of the training set that is used to pre-train the model.")
     parser.add_argument('-v', '--validation_size', type=float, default=0.1, help="Portion of the dataset that is used to validate the model.")
     parser.add_argument('-t', '--test_size', type=float, default=0.1, help="Portion of the dataset that is used to test the model, when the test dataset is not defined.")
     parser.add_argument('-pti', '--pretraining_epochs', type=int, default=50, help="Number of epochs used to pretrain the model.")
@@ -233,7 +234,7 @@ if __name__ == "__main__":
     # training details
     parser.add_argument('-m', '--model_type', type=str, default="transformer", help="Type of model to train.")
     parser.add_argument('-me', '--max_epochs', type=int, default=1, help="Maximum number of epochs to train the model at each step of P2L.")
-    parser.add_argument('-b', '--batch_size', type=int, default=64, help="Batch size used to train the model.")
+    parser.add_argument('-b', '--batch_size', type=int, default=512, help="Batch size used to train the model.")
     parser.add_argument('-dp', '--dropout_probability', type=float, default=0.2, help="Dropout probability for the layers of the model.")
     parser.add_argument('--early_stopping', action='store_false', help="")
 
