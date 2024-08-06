@@ -24,8 +24,13 @@ class CustomDataset(torch.utils.data.Dataset):
         if indices is not None:
             if isinstance(data, list):
                 self.data = []
-                for i in indices:
-                    self.data.append(data[i])
+                if isinstance(indices, torch.Tensor):
+                    for i in range(len(indices)):
+                        if indices[i]:
+                            self.data.append(data[i])
+                else:
+                    for i in indices:
+                        self.data.append(data[i])
             else:
                 self.data = data[indices]
             self.targets = targets[indices]
