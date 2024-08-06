@@ -5,7 +5,7 @@ prior_size: 0.0
 validation_size: 0.1
 test_size: 0.1
 max_epochs: 200
-batch_size: 256
+batch_size: 128
 
 
 # bound parameters
@@ -21,4 +21,6 @@ log_iterations: 10
 deterministic: True
 clamping: True
 early_stopping: False
+early_stopping_patience: 10
 min_probability: 1e-5
+n_shards: 10

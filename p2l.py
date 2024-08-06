@@ -90,7 +90,7 @@ def p2l_algorithm():
     max_compression_size = len(train_set) if wandb.config['max_compression_size'] == -1 else wandb.config['max_compression_size']
     early_stopper = StoppingCriterion(max_compression_size,
                                     stop_criterion=STOP,
-                                    patience=wandb.config['patience'],
+                                    patience=wandb.config['early_stopping_patience'],
                                     use_early_stopping=wandb.config['early_stopping'],
                                     use_p2l_stopping=not wandb.config['regression'])
     
@@ -264,6 +264,9 @@ if __name__ == "__main__":
     parser.add_argument('-nes', '--n_estimators', type=int, default=100)
     parser.add_argument('-nj', '--n_jobs', type=int, default=5)
     parser.add_argument('--warm_start', action='store_true')
+
+    # transformer parameters
+    parser.add_argument('-sh', '--n_shards', type=int, default=10)
 
     # bound parameters
     parser.add_argument('-del', '--delta', type=float, default=0.01, help="Delta used to compute the bounds.")
