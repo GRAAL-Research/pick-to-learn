@@ -168,6 +168,8 @@ def load_pretrained_model(checkpoint_path, config):
     else:
         if config['model_type'] in ['mlp', 'cnn']:
             return ClassificationModel.load_from_checkpoint(checkpoint_path)
+        elif config['model_type'] == "transformer":
+            return ClassificationTransformerModel.load_from_checkpoint(checkpoint_path)
     setting = "regression" if config['regression'] else "classification"
     raise NotImplementedError(f"Loading checkpoints for a {config['model_type']} in a {setting} setting is not supported yet.")
 
