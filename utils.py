@@ -24,8 +24,13 @@ class CustomDataset(torch.utils.data.Dataset):
         if indices is not None:
             if isinstance(data, list):
                 self.data = []
-                for i in indices:
-                    self.data.append(data[i])
+                if isinstance(indices, torch.Tensor):
+                    for i in range(len(indices)):
+                        if indices[i]:
+                            self.data.append(data[i])
+                else:
+                    for i in indices:
+                        self.data.append(data[i])
             else:
                 self.data = data[indices]
             self.targets = targets[indices]
@@ -163,6 +168,8 @@ def load_pretrained_model(checkpoint_path, config):
     else:
         if config['model_type'] in ['mlp', 'cnn']:
             return ClassificationModel.load_from_checkpoint(checkpoint_path)
+        elif config['model_type'] == "transformer":
+            return ClassificationTransformerModel.load_from_checkpoint(checkpoint_path)
     setting = "regression" if config['regression'] else "classification"
     raise NotImplementedError(f"Loading checkpoints for a {config['model_type']} in a {setting} setting is not supported yet.")
 

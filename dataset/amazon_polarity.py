@@ -7,7 +7,7 @@ from functools import partial
 def collate_function(input, data_collator=None):
     return data_collator([{'input_ids':i[0], 'labels':i[1]}for i in input])
     
-def load_amazon_polarity():
+def load_amazon_polarity(n_shards=1):
     file_path = "./amazon_polarity"
     if not os.path.isdir(file_path):
         os.mkdir(file_path)
@@ -24,16 +24,21 @@ def load_amazon_polarity():
     else:
         tokenized_datasets = load_from_disk(file_path)
     
+    train_tokenized = tokenized_datasets['train']
+    test_tokenized = tokenized_datasets['test']
+    if n_shards != 1:
+        train_tokenized = train_tokenized.shard(num_shards=n_shards, index=0)
+    
     data_collator = DataCollatorWithPadding(tokenizer)
     collate_fn = partial(collate_function, data_collator=data_collator)
     
-    train_set = CustomDataset(data=tokenized_datasets['train']['input_ids'],
-                            targets=tokenized_datasets['train']['label'],
+    train_set = CustomDataset(data=train_tokenized['input_ids'],
+                            targets=train_tokenized['label'],
                             transform=None,
                             real_targets=False,
                             is_an_image=False)
-    test_set = CustomDataset(data=tokenized_datasets['test']['input_ids'],
-                        targets=tokenized_datasets['test']['label'],
+    test_set = CustomDataset(data=test_tokenized['input_ids'],
+                        targets=test_tokenized['label'],
                         transform=None,
                         real_targets=False,
                         is_an_image=False)

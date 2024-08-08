@@ -18,7 +18,7 @@ def hyperparameter_loop(list_of_sweep_configs, dataset_config):
         config_name = get_exp_file_name(exp_config)
         if not os.path.isfile(config_name):
             exp_name = sweep_configuration['name'] + dataset_config['dataset']
-            if dataset_config.get('n_classes', -1) == 2:
+            if dataset_config.get('n_classes', -1) == 2 and dataset_config['dataset'] == "mnist":
                 exp_name += str(dataset_config['first_class']) + str(dataset_config['second_class'])
             run_sweep(exp_config, name=exp_name)
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         wandb.agent(sweep_id, function=start_sweep)
     else:
         list_of_configs = create_all_configs(sweep_configuration)
-        if config.get('regression', False) or config.get('n_classes', -1) != 2 :
+        if config.get('regression', False) or config.get('n_classes', -1) != 2 or config['dataset'] != "mnist":
             hyperparameter_loop(list_of_configs, config)
         else:
             if not isinstance(config['first_class'], list):

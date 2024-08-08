@@ -90,7 +90,7 @@ def p2l_algorithm():
     max_compression_size = len(train_set) if wandb.config['max_compression_size'] == -1 else wandb.config['max_compression_size']
     early_stopper = StoppingCriterion(max_compression_size,
                                     stop_criterion=STOP,
-                                    patience=wandb.config['patience'],
+                                    patience=wandb.config['early_stopping_patience'],
                                     use_early_stopping=wandb.config['early_stopping'],
                                     use_p2l_stopping=not wandb.config['regression'])
     
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--second_class', type=int, default=-1, help="When the problem is binary classification, the second class used in the training set.")
 
     # pretraining details
-    parser.add_argument('-p', '--prior_size', type=float, default=0.1, help="Portion of the training set that is used to pre-train the model.")
+    parser.add_argument('-p', '--prior_size', type=float, default=0.0, help="Portion of the training set that is used to pre-train the model.")
     parser.add_argument('-v', '--validation_size', type=float, default=0.1, help="Portion of the dataset that is used to validate the model.")
     parser.add_argument('-t', '--test_size', type=float, default=0.1, help="Portion of the dataset that is used to test the model, when the test dataset is not defined.")
     parser.add_argument('-pti', '--pretraining_epochs', type=int, default=50, help="Number of epochs used to pretrain the model.")
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     # training details
     parser.add_argument('-m', '--model_type', type=str, default="transformer", help="Type of model to train.")
     parser.add_argument('-me', '--max_epochs', type=int, default=1, help="Maximum number of epochs to train the model at each step of P2L.")
-    parser.add_argument('-b', '--batch_size', type=int, default=512, help="Batch size used to train the model.")
+    parser.add_argument('-b', '--batch_size', type=int, default=128, help="Batch size used to train the model.")
     parser.add_argument('-dp', '--dropout_probability', type=float, default=0.2, help="Dropout probability for the layers of the model.")
     parser.add_argument('--early_stopping', action='store_false', help="")
 
@@ -264,6 +264,9 @@ if __name__ == "__main__":
     parser.add_argument('-nes', '--n_estimators', type=int, default=100)
     parser.add_argument('-nj', '--n_jobs', type=int, default=5)
     parser.add_argument('--warm_start', action='store_true')
+
+    # transformer parameters
+    parser.add_argument('-sh', '--n_shards', type=int, default=10)
 
     # bound parameters
     parser.add_argument('-del', '--delta', type=float, default=0.01, help="Delta used to compute the bounds.")

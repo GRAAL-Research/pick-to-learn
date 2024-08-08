@@ -33,6 +33,6 @@ def load_dataset(config):
     elif config['dataset'] == "powerplant":
         return load_powerplant(config['test_size'])
     elif config['dataset'] == "amazon":
-        return load_amazon_polarity()
+        return load_amazon_polarity(config['n_shards'])
     else:
         raise NotImplementedError(f"The dataset {config['dataset']} is not supported yet.")

@@ -1,0 +1,23 @@
+dataset: "amazon"
+n_classes: 2
+regression: False
+validation_size: 0.1
+max_epochs: 200
+batch_size: 128
+
+
+# bound parameters
+delta: 0.01
+nbr_parameter_bounds: 20
+classic_bounds: True
+p2l_bounds: True
+real_bounds: True
+
+# miscellaneous
+log_iterations: 10
+deterministic: True
+clamping: True
+early_stopping: True
+early_stopping_patience: 10
+min_probability: 1e-5
+n_shards: 10
