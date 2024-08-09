@@ -24,7 +24,7 @@ def hyperparameter_loop(list_of_sweep_configs, dataset_config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--sweep_config', type=str, default="tree_based", help="Name of the config for the hyperparameters of the sweep.")
+    parser.add_argument('-s', '--sweep_config', type=str, default="tree", help="Name of the config for the hyperparameters of the sweep.")
     parser.add_argument('-p', '--params_config', type=str, default="airfoil", help="Name of the config for the parameters.")
     parser.add_argument('--online', action='store_true', help="Use if you want to run the code offline with wandb.")
     args = parser.parse_args()
