@@ -50,7 +50,6 @@ def baseline(config, name):
     information_dict['test_loss'] = test_results[0]['test_loss']
 
     wandb.log(information_dict)
-    
     information_dict['config'] = dict(wandb.config)
 
     # save the experiment informations in a json
