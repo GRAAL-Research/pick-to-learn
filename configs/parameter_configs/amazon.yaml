@@ -14,10 +14,10 @@ p2l_bounds: True
 real_bounds: True
 
 # miscellaneous
-log_iterations: 10
+log_iterations: 2
 deterministic: True
 clamping: True
 early_stopping: True
-early_stopping_patience: 10
+early_stopping_patience: 20
 min_probability: 1e-5
 n_shards: 10
