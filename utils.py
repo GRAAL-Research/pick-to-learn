@@ -11,6 +11,7 @@ from models.decision_tree import RegressionTree, RegressionTreeModel, Regression
 from itertools import product
 import wandb
 from bounds.real_valued_bounds import compute_real_valued_bounds
+from copy import deepcopy
 
 class CustomDataset(torch.utils.data.Dataset):
     def __init__(self, data, targets, indices=None, transform=ToTensor(), real_targets=False, is_an_image=True):
@@ -162,7 +163,7 @@ def create_model(config):
     raise NotImplementedError(f"Model type = {config['model_type']} with dataset {config['dataset']} is not implemented yet.")
 
 def load_pretrained_model(checkpoint_path, config):
-    if config['regression']:
+    if config.get('regression', False):
         if config['model_type'] in ['tree', 'forest']:
             return RegressionTreeModel.load_from_checkpoint(checkpoint_path)
     else:
@@ -254,13 +255,22 @@ def create_all_configs(config):
     list_of_configs = list(product(*list_of_hyperparams))
     return [dict(zip(list_of_keys, config_)) for config_ in list_of_configs]
 
-def get_exp_file_name(config):
+def get_exp_file_name(config, path="./experiment_logs/"):
+    if config['model_type'] in ['tree', 'forest']:
+        config_ = deepcopy(config)
+        config_.pop('early_stopping_patience', None)
+        list_of_params = list(config_.values())
+        file_name = "exp_"
+        for param in list_of_params:
+            file_name += str(param) + "_"
+        file_name += ".json"
+        return path + file_name
     list_of_params = list(config.values())
     file_name = "exp_"
     for param in list_of_params:
         file_name += str(param) + "_"
     file_name += ".json"
-    return "./experiment_logs/" + file_name
+    return path + file_name
 
 def get_updated_batch_size(batch_size, model_type, dataset_length):
     """

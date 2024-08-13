@@ -11,73 +11,108 @@ import wandb
 import datetime
 from functools import partial
 import yaml
+from copy import deepcopy
 
-def baseline(config):
-    wandb.init(project="p2l", config=config)
-    seed_everything(42, workers=True)
-
-    # constants to be used later 
-    STOP = torch.log(torch.tensor(wandb.config['n_classes']))
-    batch_size = wandb.config['batch_size']
-    information_dict = {}
+def baseline(config, name):
+    wandb.init(project=name, config=config)
+    seed_everything(wandb.config['seed'], workers=True)
+    accelerator = get_accelerator(wandb.config['model_type'])
 
     # create models, load dataset and split it if necessary
-    model = create_model(wandb.config)
-    train_set, test_set = load_dataset(wandb.config)
-    train_set, validation_set = split_train_validation_dataset(train_set, wandb.config['validation_size'])
-
-    train_loader= torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=False, num_workers=5, persistent_workers=True)
-    valset_loader = torch.utils.data.DataLoader(validation_set, batch_size=batch_size, shuffle=False,  num_workers=5, persistent_workers=True)
-    callbacks = [EarlyStopping(monitor="validation_loss", mode="min", patience=wandb.config['patience'])]
-    trainer = L.Trainer(max_epochs=wandb.config['max_epochs'], callbacks=callbacks)
-    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=valset_loader)
     
-    # create the dataloaders for the validation and test data. 
-    test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size,  num_workers=5, persistent_workers=True)
-    train_results = trainer.validate(model=model, dataloaders=train_loader)
-    val_results = trainer.validate(model=model, dataloaders=valset_loader)
-    test_results = trainer.test(model=model, dataloaders=test_loader)
+    train_set, test_set, collate_fn = load_dataset(wandb.config)
+    if wandb.config['prior_size'] != 0.0:
+        prior_set, train_set, validation_set = split_prior_train_validation_dataset(train_set, wandb.config['prior_size'], wandb.config['validation_size'])
+    else:
+        train_set, validation_set = split_train_validation_dataset(train_set, wandb.config['validation_size'])
+
+    trainset_loader = get_dataloader(dataset=train_set, batch_size=wandb.config['batch_size'], collate_fn=collate_fn)
+    valset_loader = get_dataloader(dataset=validation_set, batch_size=wandb.config['batch_size'], collate_fn=collate_fn)
+    test_loader = get_dataloader(dataset=test_set, batch_size=wandb.config['batch_size'], collate_fn=collate_fn)
+
+    if wandb.config['prior_size'] == 0.0:
+         model = create_model(wandb.config)
+    else:
+        file_path = "./prior_models/"
+        if not os.path.isdir(file_path):
+            os.mkdir(file_path)
+            
+        model_name = f"prior_model_{wandb.config['model_type']}_{wandb.config['prior_size']}_{wandb.config['pretraining_lr']}_{wandb.config['pretraining_epochs']}.ckpt"
+        file_path = file_path + model_name
+        if os.path.isfile(file_path):
+            model = load_pretrained_model(file_path, wandb.config)
+        else:
+            model = create_model(wandb.config)
+            prior_loader= get_dataloader(dataset=prior_set, batch_size=wandb.config['batch_size'] , collate_fn=collate_fn)
+            prior_trainer = get_trainer(accelerator=accelerator, max_epochs=wandb.config['pretraining_epochs'])
+            prior_trainer.fit(model=model, train_dataloaders=prior_loader)
+            prior_trainer.save_checkpoint(file_path)
+
+    update_learning_rate(model, wandb.config.get('training_lr', None))
+    trainer = get_trainer(max_epochs=100)
+
+    trainer.fit(model=model, train_dataloaders=trainset_loader, val_dataloaders=valset_loader)   
+
+    train_results = trainer.validate(model=model, dataloaders=trainset_loader)
+    validation_results = trainer.validate(model=model, dataloaders=valset_loader)
+    test_results = trainer.test(model, dataloaders=test_loader)
+
+    information_dict = {}
 
     information_dict['train_set_size'] = len(train_set)
-    information_dict['test_set_size'] = len(test_set)
     information_dict['validation_set_size'] = len(validation_set)
+    information_dict['test_set_size'] = len(test_set)
 
-    information_dict['train_error'] = train_results[0]['validation_error']
-    information_dict['train_loss'] = train_results[0]['validation_loss']
-
-    information_dict['validation_error'] = val_results[0]['validation_error']
-    information_dict['validation_loss'] = val_results[0]['validation_loss']
-
+    information_dict['complement_error'] = train_results[0]['validation_error']
+    information_dict['validation_error'] = validation_results[0]['validation_error']
     information_dict['test_error'] = test_results[0]['test_error']
+
+    information_dict['complement_loss'] = train_results[0]['validation_loss']
+    information_dict['validation_loss'] = validation_results[0]['validation_loss']
     information_dict['test_loss'] = test_results[0]['test_loss']
 
+    wandb.log(information_dict)
     information_dict['config'] = dict(wandb.config)
 
     # save the experiment informations in a json
     if not os.path.isdir("./baseline_logs"):
         os.mkdir("./baseline_logs")
 
-    file_name = f"exp_{wandb.config['dataset']}_{wandb.config['model_type']}_{str(datetime.datetime.now()).replace(' ', '_')}.json"
-    file_dir = "./baseline_logs/" + file_name
-    with open(file_dir, "w") as outfile: 
+    file_name = get_exp_file_name(dict(wandb.config), path="./baseline_logs/")
+    with open(file_name, "w") as outfile: 
         json.dump(information_dict, outfile)
     wandb.finish()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-b', '--baseline_config', type=str, default="default", help="Name of the config for the hyperparameters of the sweep.")
+    parser.add_argument('-s', '--sweep_config', type=str, default="pretraining", help="Name of the config for the hyperparameters of the sweep.")
     parser.add_argument('-p', '--params_config', type=str, default="mnist", help="Name of the config for the parameters.")
+    parser.add_argument('--online', action='store_true', help="Use if you want to run the code offline with wandb.")
     args = parser.parse_args()
 
-    baseline_config_name = "./configs/baseline_configs/" + args.baseline_config + ".yaml"
-    with open(baseline_config_name) as file:
+    sweep_config_name = "./configs/sweep_configs/" + args.sweep_config + ".yaml"
+    with open(sweep_config_name) as file:
         sweep_configuration = yaml.safe_load(file)
-    
+
     params_config_name = "./configs/parameter_configs/" + args.params_config + ".yaml"
     with open(params_config_name) as file:
         config = yaml.safe_load(file)
 
-    sweep_id = wandb.sweep(sweep=sweep_configuration, project="p2l")
+    # correct types of entries to make sure all floats/ints are parsed as such
+    for key, value in config.items():
+        config[key] = correct_type_of_entry(value)
 
-    start_sweep = partial(baseline, config=config)
-    wandb.agent(sweep_id, function=start_sweep)
+    if args.online:
+        sweep_id = wandb.sweep(sweep=sweep_configuration, project="p2l")
+
+        start_sweep = partial(baseline, config=config, name=sweep_configuration['name'])
+        wandb.agent(sweep_id, function=start_sweep)
+    else:
+        list_of_configs = create_all_configs(sweep_configuration)
+        for sweep_config_ in list_of_configs:
+            exp_config = sweep_config_ | config
+            config_name = get_exp_file_name(exp_config, path="./baseline_logs/")
+            if not os.path.isfile(config_name):
+                exp_name = "baseline_" + config['dataset']
+                baseline(exp_config, name=exp_name)

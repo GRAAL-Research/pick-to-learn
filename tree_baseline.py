@@ -1,17 +1,12 @@
-import torch
 from lightning.pytorch import seed_everything
-import lightning as L
 from utils import *
-from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from dataset.dataset_loader import load_dataset
 import os
 import json
 import argparse
 import wandb
-import datetime
 from functools import partial
 import yaml
-from copy import deepcopy
 
 def baseline(config, name):
     wandb.init(project=name, config=config)
@@ -56,9 +51,8 @@ def baseline(config, name):
     if not os.path.isdir("./baseline_logs"):
         os.mkdir("./baseline_logs")
 
-    file_name = f"exp_{wandb.config['dataset']}_{wandb.config['model_type']}_{str(datetime.datetime.now()).replace(' ', '_')}.json"
-    file_dir = "./baseline_logs/" + file_name
-    with open(file_dir, "w") as outfile: 
+    file_name = get_exp_file_name(dict(wandb.config), path="./baseline_logs/")
+    with open(file_name, "w") as outfile: 
         json.dump(information_dict, outfile)
     wandb.finish()
 
@@ -91,7 +85,7 @@ if __name__ == "__main__":
         list_of_configs = create_all_configs(sweep_configuration)
         for sweep_config_ in list_of_configs:
             exp_config = sweep_config_ | config
-            config_name = get_exp_file_name(exp_config)
+            config_name = get_exp_file_name(exp_config, path="./baseline_logs/")
             if not os.path.isfile(config_name):
                 exp_name = "baseline_" + config['dataset']
                 baseline(exp_config, name=exp_name)
