@@ -10,8 +10,8 @@ class DistilBert(nn.Module):
         distilbert_config = DistilBertConfig(seq_classif_dropout=self.dropout_probability, num_labels=self.n_classes)
         self.model = DistilBertForSequenceClassification.from_pretrained(pretrained_model_name_or_path="distilbert-base-uncased",
                                                                           config=distilbert_config)
-        for p in self.model.distilbert.parameters():
-            p.requires_grad = False
+        # for p in self.model.distilbert.parameters():
+        #     p.requires_grad = False
 
     def forward(self, input):
         return self.model(**input).logits

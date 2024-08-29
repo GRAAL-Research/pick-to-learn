@@ -11,9 +11,9 @@ parameters:
   prior_size:
     value: 0.5
   pretraining_epochs:
-    values: [20, 50]
+      value: 2
   pretraining_lr:
-    value: 1e-3
+    values: [1e-3, 1e-4, 1e-5]
 
   # training details
   model_type:
@@ -33,7 +33,7 @@ parameters:
 
   # p2l params
   max_compression_size:
-    value: 20000
+    value: 2000
   data_groupsize: 
     value: 32
   patience:

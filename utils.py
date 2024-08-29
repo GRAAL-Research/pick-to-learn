@@ -256,15 +256,6 @@ def create_all_configs(config):
     return [dict(zip(list_of_keys, config_)) for config_ in list_of_configs]
 
 def get_exp_file_name(config, path="./experiment_logs/"):
-    if config['model_type'] in ['tree', 'forest']:
-        config_ = deepcopy(config)
-        config_.pop('early_stopping_patience', None)
-        list_of_params = list(config_.values())
-        file_name = "exp_"
-        for param in list_of_params:
-            file_name += str(param) + "_"
-        file_name += ".json"
-        return path + file_name
     list_of_params = list(config.values())
     file_name = "exp_"
     for param in list_of_params:
