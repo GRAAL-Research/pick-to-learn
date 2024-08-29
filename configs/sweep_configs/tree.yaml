@@ -26,4 +26,4 @@ parameters:
   data_groupsize: 
     value: 1
   patience:
-    value: 10
+    value: 20
