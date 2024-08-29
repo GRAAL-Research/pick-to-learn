@@ -12,9 +12,24 @@ import datetime
 from functools import partial
 import yaml
 from copy import deepcopy
+from pytorch_lightning.loggers import WandbLogger
+
+class CustomCallback(EarlyStopping):
+    def __init__(self, monitor, stop):
+        super().__init__(monitor=monitor)
+        self.monitor = monitor
+        self.stop = stop
+        self.mode = "="
+        self.mode_dict = {"=": torch.eq}
+
+    def _evaluate_stopping_criteria(self, current):
+        should_stop = self.monitor_op(current, self.stop)
+        return should_stop, None
 
 def baseline(config, name):
     wandb.init(project=name, config=config)
+    logger = WandbLogger(project=name, experiment=wandb.run, prefix="(train)")
+
     seed_everything(wandb.config['seed'], workers=True)
     accelerator = get_accelerator(wandb.config['model_type'])
 
@@ -49,14 +64,16 @@ def baseline(config, name):
             prior_trainer.save_checkpoint(file_path)
 
     update_learning_rate(model, wandb.config.get('training_lr', None))
-    trainer = get_trainer(max_epochs=100)
-
-    trainer.fit(model=model, train_dataloaders=trainset_loader, val_dataloaders=valset_loader)   
+    
+    trainer = get_trainer(max_epochs=wandb.config['max_epochs'], 
+                          callbacks=[CustomCallback(monitor="validation_error", stop=0.0)], logger=logger)
+    trainer.fit(model=model, train_dataloaders=trainset_loader, val_dataloaders=trainset_loader)
 
     train_results = trainer.validate(model=model, dataloaders=trainset_loader)
     validation_results = trainer.validate(model=model, dataloaders=valset_loader)
     test_results = trainer.test(model, dataloaders=test_loader)
 
+    logger._prefix = ""
     information_dict = {}
 
     information_dict['train_set_size'] = len(train_set)
@@ -83,6 +100,15 @@ def baseline(config, name):
         json.dump(information_dict, outfile)
     wandb.finish()
 
+def hyperparameter_loop(list_of_sweep_configs, dataset_config):
+    for sweep_config_ in list_of_sweep_configs:
+        exp_config = sweep_config_ | dataset_config
+        config_name = get_exp_file_name(exp_config, path="./baseline_logs/")
+        if not os.path.isfile(config_name):
+            exp_name = 'baseline_' + dataset_config['dataset']
+            if dataset_config.get('n_classes', -1) == 2 and dataset_config['dataset'] == "mnist":
+                exp_name += str(dataset_config['first_class']) + str(dataset_config['second_class'])
+            baseline(exp_config, name=exp_name)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -110,9 +136,15 @@ if __name__ == "__main__":
         wandb.agent(sweep_id, function=start_sweep)
     else:
         list_of_configs = create_all_configs(sweep_configuration)
-        for sweep_config_ in list_of_configs:
-            exp_config = sweep_config_ | config
-            config_name = get_exp_file_name(exp_config, path="./baseline_logs/")
-            if not os.path.isfile(config_name):
-                exp_name = "baseline_" + config['dataset']
-                baseline(exp_config, name=exp_name)
+        if config.get('n_classes', -1) != 2 or config['dataset'] != "mnist":
+            hyperparameter_loop(list_of_configs, config)
+        else:
+            if not isinstance(config['first_class'], list):
+                config['first_class'] = [config['first_class']]
+                config['second_class'] = [config['second_class']]
+            
+            for idx in range(len(config['first_class'])):
+                new_config = deepcopy(config)
+                new_config['first_class'] = config['first_class'][idx]
+                new_config['second_class'] = config['second_class'][idx]
+                hyperparameter_loop(list_of_configs, new_config)

@@ -56,6 +56,7 @@ class ClassificationModel(L.LightningModule):
         self.log("validation_acc", validation_acc)
         validation_error = 1 - validation_acc
         self.log("validation_error", validation_error)
+        return torch.nn.CrossEntropyLoss(reduction='sum')(y_hat, y)
 
 
     def test_step(self, batch, batch_idx):
