@@ -21,6 +21,6 @@ log_iterations: 5
 deterministic: True
 clamping: True
 early_stopping: True
-early_stopping_patience: 10
+early_stopping_patience: 20
 min_val: 0
 max_val: 45
