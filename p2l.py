@@ -54,7 +54,11 @@ def p2l_algorithm():
         if not os.path.isdir(file_path):
             os.mkdir(file_path)
             
+<<<<<<< HEAD
         model_name = f"prior_model_{wandb.config['model_type']}_{wandb.config['prior_size']}_{wandb.config['pretraining_lr']}_{wandb.config['pretraining_epochs']}_{wandb.config['n_classes']}.ckpt"
+=======
+        model_name = f"prior_model_{wandb.config['model_type']}_{wandb.config['prior_size']}_{wandb.config['pretraining_lr']}_{wandb.config['pretraining_epochs']}_{wandb.config['seed']}.ckpt"
+>>>>>>> 4a56c69 (fix problems found whilst writing the article)
         file_path = file_path + model_name
         if os.path.isfile(file_path):
             model = load_pretrained_model(file_path, wandb.config)

@@ -22,5 +22,7 @@ deterministic: True
 clamping: True
 early_stopping: True
 early_stopping_patience: 20
-min_val: 0
-max_val: 100
+min_val: 35.40
+real_min_val: 35.75
+real_max_val: 39.3
+max_val: 39.66
