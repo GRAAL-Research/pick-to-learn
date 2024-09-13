@@ -11,9 +11,9 @@ parameters:
   prior_size:
     value: 0.5
   pretraining_epochs:
-      value: 2
+      values: [2, 5]
   pretraining_lr:
-    values: [1e-3, 1e-4, 1e-5]
+    value: 2e-5
 
   # training details
   model_type:
@@ -25,7 +25,7 @@ parameters:
   optimizer:
     value: "Adam"
   training_lr:
-    values: [1e-4, 1e-5, 1e-6]
+    value: 1e-8
   momentum:
     value: None
   nesterov:

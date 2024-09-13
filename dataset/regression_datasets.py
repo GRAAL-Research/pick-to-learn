@@ -11,7 +11,7 @@ def fetch_repo(id):
             uci_dataset = fetch_ucirepo(id=id)
             break
         except ConnectionError:
-            time.sleep(5)
+            time.sleep(20)
     return uci_dataset
 
 
