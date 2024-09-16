@@ -1,8 +1,8 @@
-dataset: "mnist"
-regression: False
-n_classes: 10
-first_class: None #[0, 1, 2, 4, 5, -1]
-second_class: None #[8, 7, 3, 9, 6, -1]
+dataset: "randomMnist"
+n_classes: 2
+first_class: None
+second_class: None 
+regression : False
 validation_size: 0.1
 max_epochs: 200
 batch_size: 64
@@ -18,6 +18,6 @@ real_bounds: True
 log_iterations: 10
 deterministic: True
 clamping: True
-early_stopping: True
+early_stopping: False
 early_stopping_patience: 20
 min_probability: 1e-5

@@ -1,4 +1,4 @@
-from dataset.mnist import load_binary_mnist, load_low_high_mnist, load_mnist
+from dataset.mnist import load_binary_mnist, load_low_high_mnist, load_mnist, load_random_mnist
 from dataset.cifar10 import load_binary_cifar10
 from dataset.regression_datasets import load_concrete, load_parkinson, load_powerplant, load_infrared, load_airfoil
 from dataset.amazon_polarity import load_amazon_polarity
@@ -16,6 +16,8 @@ def load_dataset(config):
             return load_mnist()
         else:
             raise NotImplementedError(f"{config['dataset']} with {config['n_classes']} is not supported.")
+    elif config['dataset'] == "randomMnist":
+        return load_random_mnist()
     elif config['dataset'] == "cifar10":
         if config['n_classes'] == 2:
             return load_binary_cifar10(low=config['first_class'],

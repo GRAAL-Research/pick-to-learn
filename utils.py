@@ -127,6 +127,14 @@ def create_model(config):
                                                 momentum=config['momentum'],
                                                 batch_size=config['batch_size']
                                                 )
+    elif config['dataset'] == "randomMnist":
+        return ClassificationModel(MnistCnn(n_classes=config['n_classes'],
+                                    dropout_probability=config['dropout_probability']),
+                                    optimizer=config['optimizer'],
+                                    lr=lr,
+                                    momentum=config['momentum'],
+                                    batch_size=config['batch_size']
+                                    )
     elif config['dataset'] == "cifar10":
         return ClassificationModel(Cifar10Cnn9l(n_classes=config['n_classes'],
                                                 dropout_probability=config['dropout_probability']),
