@@ -42,13 +42,18 @@ def load_low_high_mnist():
     return train_dataset, test_dataset, collate_fn
 
 def load_random_mnist():
+    separator = 4
 
     transform = ToTensor()
     train_set = MNIST(root="MNIST", download=True, train=True, transform=transform)
-    train_set.targets = (torch.rand(train_set.targets.shape) > 0.5).to(int)
+    train_set.targets = (train_set.targets > separator).to(int)
+    rand_idx = torch.randint(0, train_set.targets.shape[0], (int(0.1 * train_set.targets.shape[0]), ))
+    train_set.targets[rand_idx] = (torch.rand(train_set.targets[rand_idx].shape) > 0.5).to(int)
 
     test_set = MNIST(root="MNIST", download=True, train=False, transform=transform)
-    test_set.targets = (torch.rand(test_set.targets.shape) > 0.5).to(int)
+    test_set.targets = (test_set.targets > separator).to(int)
+    rand_idx = torch.randint(0, test_set.targets.shape[0], (int(0.1 * test_set.targets.shape[0]), ))
+    test_set.targets[rand_idx] = (torch.rand(test_set.targets[rand_idx].shape) > 0.5).to(int)
 
     train_dataset = CustomDataset(data=train_set.data, targets=train_set.targets, transform=transform, real_targets=False, is_an_image=True)
     test_dataset = CustomDataset(data=test_set.data, targets=test_set.targets, transform=transform, real_targets=False, is_an_image=True)
