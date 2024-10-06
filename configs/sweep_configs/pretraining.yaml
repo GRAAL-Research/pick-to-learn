@@ -33,7 +33,7 @@ parameters:
 
   # p2l params
   max_compression_size:
-    value: -1
+    value: 20000
   data_groupsize: 
     value: 32
   patience:

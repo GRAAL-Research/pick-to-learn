@@ -52,7 +52,7 @@ def baseline(config, name):
         if not os.path.isdir(file_path):
             os.mkdir(file_path)
             
-        model_name = f"prior_model_{wandb.config['model_type']}_{wandb.config['prior_size']}_{wandb.config['pretraining_lr']}_{wandb.config['pretraining_epochs']}.ckpt"
+        model_name = f"prior_model_{wandb.config['model_type']}_{wandb.config['prior_size']}_{wandb.config['pretraining_lr']}_{wandb.config['pretraining_epochs']}_{wandb.config['seed']}.ckpt"
         file_path = file_path + model_name
         if os.path.isfile(file_path):
             model = load_pretrained_model(file_path, wandb.config)

@@ -3,7 +3,7 @@ import numpy as np
 
 from scipy.stats import norm
 
-#Code volé à Alexandre Drouin
+# Code volé à Alexandre Drouin
 
 def log_stirlings_approximation(n):
     """

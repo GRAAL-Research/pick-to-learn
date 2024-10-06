@@ -1,2 +1,12 @@
-# pick-to-learn
-Picking-to-learn or learning to pick? That is the question
+# New sample-compression bounds for Pick-To-Learn
+
+This is the repository associated to the paper : 
+
+**Sample compression unleashed : New generalization bounds for real valued losses**
+
+The PBB and regression forests experiments were run using Python 3.12.2 and a virtual environment as defined in the following file :  `requirements_pbb.txt`. All the experiments on MNIST were run using Python 3.12.3 and a virtual environment as defined in the following file :  `requirements_p2l.txt`.
+
+To run the grid search, use the file `main.py`. For the baselines, use the files `baseline.py` and `tree_baseline.py`. The results were parsed using the jupyter notebooks. In both cases, the configs for the datasets can be found in `configs/parameter_configs` and the configs for the type of models can be found in `configs/sweep_configs`.
+
+
+

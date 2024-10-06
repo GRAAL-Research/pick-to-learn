@@ -12,6 +12,7 @@ from itertools import product
 import wandb
 from bounds.real_valued_bounds import compute_real_valued_bounds
 from copy import deepcopy
+import numpy as np
 
 class CustomDataset(torch.utils.data.Dataset):
     def __init__(self, data, targets, indices=None, transform=ToTensor(), real_targets=False, is_an_image=True):
@@ -331,6 +332,10 @@ def log_metrics(trainer, model, complement_loader, valset_loader, test_loader, c
                                     wandb.config['delta'],
                                     wandb.config['nbr_parameter_bounds'],
                                     metrics)
+        if wandb.config['clamping']:
+            compute_real_valued_bounds(compression_set_length, n_sigma, train_set_length, complement_res[0]['validation_loss'], wandb.config['delta'],
+                                        wandb.config['nbr_parameter_bounds'], metrics, min_val=0, 
+                                        max_val=-np.log(wandb.config['min_probability']), prefix="CE")
         wandb.log(metrics)
 
     if return_validation_loss:

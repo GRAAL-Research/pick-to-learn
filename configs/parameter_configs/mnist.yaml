@@ -18,6 +18,6 @@ real_bounds: True
 log_iterations: 10
 deterministic: True
 clamping: True
-early_stopping: True
+early_stopping: False
 early_stopping_patience: 20
 min_probability: 1e-5
