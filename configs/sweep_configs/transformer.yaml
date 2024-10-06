@@ -19,13 +19,13 @@ parameters:
   model_type:
     value : "transformer"
   dropout_probability:
-    values: [0.1, 0.2]
+    value: 0.1
 
   # optimizer
   optimizer:
     value: "Adam"
   training_lr:
-    value: 1e-8
+    values: [1e-6, 1e-7, 1e-8]
   momentum:
     value: None
   nesterov:
