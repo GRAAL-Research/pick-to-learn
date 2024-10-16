@@ -25,7 +25,7 @@ parameters:
   optimizer:
     value: "Adam"
   training_lr:
-    value: 1e-8
+    value: [1e-6,1e-7,1e-8]
   momentum:
     value: None
   nesterov:
