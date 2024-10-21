@@ -1,7 +1,11 @@
 import torch
 from lightning.pytorch import seed_everything
 import lightning as L
-from utils import *
+from utilities.utils import *
+from utilities.utils_compression_set import *
+from utilities.utils_datasets import *
+from utilities.utils_early_stopping import *
+from utilisies.utils_models import *
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from dataset.dataset_loader import load_dataset
 import os

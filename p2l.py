@@ -1,7 +1,11 @@
 import torch
 from lightning.pytorch import seed_everything
 import lightning as L
-from utils import *
+from utilities.utils import *
+from utilities.utils_compression_set import *
+from utilities.utils_datasets import *
+from utilities.utils_early_stopping import *
+from utilities.utils_models import *
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from bounds.p2l_bounds import compute_all_p2l_bounds
 from bounds.real_valued_bounds import compute_real_valued_bounds
@@ -217,7 +221,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # dataset details 
-    parser.add_argument('-d', '--dataset', type=str, default="amazon", help="Name of the dataset.")
+    parser.add_argument('-d', '--dataset', type=str, default="moons", help="Name of the dataset.")
     parser.add_argument('-r', '--regression', action='store_true', help="If the dataset is a regression problem.")
     parser.add_argument('-nc', '--n_classes', type=int, default=2, help="Number of classes used in the training set.")
     parser.add_argument('-f', '--first_class', type=int, default=-1,
@@ -232,11 +236,12 @@ if __name__ == "__main__":
     parser.add_argument('-plr', '--pretraining_lr', type=float, default=1e-3, help="Learning rate used by the optimizer to pretrain the model.")
 
     # training details
-    parser.add_argument('-m', '--model_type', type=str, default="transformer", help="Type of model to train.")
+    parser.add_argument('-m', '--model_type', type=str, default="forest", help="Type of model to train.")
     parser.add_argument('-me', '--max_epochs', type=int, default=1, help="Maximum number of epochs to train the model at each step of P2L.")
     parser.add_argument('-b', '--batch_size', type=int, default=128, help="Batch size used to train the model.")
     parser.add_argument('-dp', '--dropout_probability', type=float, default=0.2, help="Dropout probability for the layers of the model.")
-    parser.add_argument('--early_stopping', action='store_false', help="")
+    parser.add_argument('--early_stopping', action='store_false', help="Should the model early stop.")
+    parser.add_argument('-esp', '--early_stopping_patience', type=int, default=20, help="Number of iterations before early stopping.")
 
     # optimizer
     parser.add_argument('-o', '--optimizer', type=str, default="Adam", help="Optimizer used to train the model.")

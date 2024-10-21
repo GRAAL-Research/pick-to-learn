@@ -1,5 +1,5 @@
 from ucimlrepo import fetch_ucirepo 
-from utils import CustomDataset, split_train_validation_dataset
+from utilities.utils_datasets import CustomDataset, split_train_validation_dataset
 import torch
 import pandas as pd
 import numpy as np
