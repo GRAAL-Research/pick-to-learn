@@ -1,7 +1,7 @@
 from datasets import load_dataset, load_from_disk
 from transformers import DistilBertTokenizerFast, DataCollatorWithPadding
 import os
-from utils import CustomDataset
+from utilities.utils_datasets import CustomDataset
 from functools import partial
 
 def collate_function(input, data_collator=None):

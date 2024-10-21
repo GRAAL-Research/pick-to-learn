@@ -1,7 +1,7 @@
 from torchvision.datasets import CIFAR10
 from torchvision import transforms
 import torch
-from utils import CustomDataset
+from utilities.utils_datasets import CustomDataset
 
 
 def load_binary_cifar10(low=1, high=7):

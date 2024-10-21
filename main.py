@@ -3,7 +3,7 @@ from p2l import p2l_algorithm
 import argparse
 import yaml
 from functools import partial
-from utils import create_all_configs, get_exp_file_name, correct_type_of_entry
+from utilities.utils import create_all_configs, get_exp_file_name, correct_type_of_entry
 import os
 from copy import deepcopy
 
