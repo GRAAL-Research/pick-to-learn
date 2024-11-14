@@ -1,6 +1,6 @@
 from torchvision.datasets import MNIST
 from torchvision.transforms import ToTensor
-from utils import CustomDataset
+from utilities.utils_datasets import CustomDataset
 import torch
 
 def load_binary_mnist(low=1, high=7):

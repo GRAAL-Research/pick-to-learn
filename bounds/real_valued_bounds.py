@@ -42,6 +42,10 @@ def compute_real_valued_bounds(m, n_sigma, n, val_error, delta, nbr_parameter_bo
   
   bounded_val_error = val_error / (max_val - min_val)
 
+   # some precision errors happened, where the normalization led to errors up to 1 + 1e-15
+  if 1.0 < bounded_val_error <= 1+1e-10:
+      bounded_val_error = 1.0
+
   epsilon = compute_epsilon(m, n_sigma, n, delta)
   information_dict[prefix + 'kl_bound'] = (max_val - min_val) * kl_bound(m, n, bounded_val_error, epsilon)
   print("Real valued bound with kl", information_dict[prefix + 'kl_bound'])

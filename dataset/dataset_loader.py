@@ -2,6 +2,7 @@ from dataset.mnist import load_binary_mnist, load_low_high_mnist, load_mnist, lo
 from dataset.cifar10 import load_binary_cifar10
 from dataset.regression_datasets import load_concrete, load_parkinson, load_powerplant, load_infrared, load_airfoil
 from dataset.amazon_polarity import load_amazon_polarity
+from dataset.toys import load_moons
 
 
 def load_dataset(config):
@@ -36,5 +37,7 @@ def load_dataset(config):
         return load_powerplant(config['test_size'])
     elif config['dataset'] == "amazon":
         return load_amazon_polarity(config['n_shards'])
+    elif config['dataset'] == "moons":
+        return load_moons(config['seed'], config['test_size'])
     else:
         raise NotImplementedError(f"The dataset {config['dataset']} is not supported yet.")
