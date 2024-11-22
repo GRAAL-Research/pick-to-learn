@@ -4,6 +4,9 @@ from itertools import product
 import wandb
 from bounds.real_valued_bounds import compute_real_valued_bounds
 import numpy as np
+import os
+from models.autoencoder import AutoEncoderModel, create_autoencoder
+
 
 def get_max_error_idx(errors, k):
     error_tensor = torch.cat(errors)
@@ -143,3 +146,71 @@ def log_metrics(trainer, model, complement_loader, valset_loader, test_loader, c
 
     if return_validation_loss:
         return complement_res[0]['validation_loss']
+
+
+def gaussian_kernel(dist, sigma):
+    return torch.exp(- dist.pow(2) / (sigma**2))
+
+def unbiased_mmd(X, Y, sigmas=[1, 2, 5, 10, 25]):
+    XX = torch.cdist(X, X)
+    YY = torch.cdist(Y, Y)
+    XY = torch.cdist(X, Y)
+
+    KXX = torch.zeros(XX.shape)
+    KYY = torch.zeros(YY.shape)
+    KXY = torch.zeros(XY.shape)
+
+    for sigma in sigmas:
+      KXX += gaussian_kernel(XX, sigma)
+      KYY += gaussian_kernel(YY, sigma)
+      KXY +=  gaussian_kernel(XY, sigma)
+
+    KXX = (KXX.sum() - (len(sigmas) * X.shape[0])) / (len(sigmas) * X.shape[0] * (X.shape[0] - 1))
+    KYY = (KYY.sum() - (len(sigmas) * Y.shape[0])) / (len(sigmas) * Y.shape[0] * (Y.shape[0] - 1))
+    KXY = KXY.sum() / (len(sigmas) * X.shape[0] * Y.shape[0])
+
+    return KXX + KYY - 2 * KXY
+
+def biased_mmd(X, Y, sigmas=[1, 2, 5, 10, 25]):
+    XX = torch.cdist(X, X)
+    YY = torch.cdist(Y, Y)
+    XY = torch.cdist(X, Y)
+
+    KXX = torch.zeros(XX.shape)
+    KYY = torch.zeros(YY.shape)
+    KXY = torch.zeros(XY.shape)
+
+    for sigma in sigmas:
+      KXX += gaussian_kernel(XX, sigma)
+      KYY += gaussian_kernel(YY, sigma)
+      KXY +=  gaussian_kernel(XY, sigma)
+
+    KXX = KXX.sum() / (len(sigmas) * X.shape[0]**2 )
+    KYY = KYY.sum() / (len(sigmas) * (Y.shape[0]**2))
+    KXY = KXY.sum() / (len(sigmas) * (X.shape[0] * Y.shape[0]))
+
+    return KXX + KYY - 2 * KXY
+
+
+def compute_mmd(trainset_loader, compression_loader, information_dict):
+    file_path = "./autoencoders_mmd/"
+    if not os.path.isdir(file_path):
+        os.mkdir(file_path)
+
+    ae_trainer = get_trainer(accelerator=accelerator, max_epochs=wandb.config.get("max_epochs_AE", 200))
+        
+    model_name = f"autoencoder_{wandb.config['dataset']}" +\
+                    f"{wandb.config['first_class'] + wandb.config['second_class'] if wandb.config['n_classes'] == 2 else ''}" +\
+                    f"_{wandb.config['seed']}.ckpt"
+    ae_file_path = file_path + model_name
+    if os.path.isfile(ae_file_path):
+        autoencoder = AutoEncoderModel.load_from_checkpoint(checkpoint_path)
+    else:
+        autoencoder = create_autoencoder(wandb.config)
+        ae_trainer.fit(model=autoencoder, train_dataloaders=trainset_loader)
+        ae_trainer.save_checkpoint(ae_file_path)
+
+    encoded_dataset = torch.concat(ae_trainer.predict(model=autoencoder, dataloaders=trainset_loader))
+    encoded_compression_set = torch.concat(ae_trainer.predict(model=autoencoder, dataloaders=compression_loader))
+    information_dict['mmd_u'] = unbiased_mmd(encoded_dataset, encoded_compression_set).item()
+    information_dict['mmd_b'] = biased_mmd(encoded_dataset, encoded_compression_set).item()

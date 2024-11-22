@@ -170,3 +170,4 @@ results/
 prior_models/
 amazon_polarity/
 *.zip
+autoencoders_mmd/

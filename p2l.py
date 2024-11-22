@@ -208,7 +208,10 @@ def p2l_algorithm():
     wandb.log(information_dict)
 
     information_dict['config'] = dict(wandb.config)
-
+    
+    if wandb.config.get("estimate_mmd", False):
+        compute_mmd(trainset_loader, compression_loader, information_dict)
+        
     # save the experiment informations in a json
     if not os.path.isdir("./experiment_logs"):
         os.mkdir("./experiment_logs")
@@ -217,16 +220,20 @@ def p2l_algorithm():
     with open(file_dir, "w") as outfile: 
         json.dump(information_dict, outfile)
 
+    if not os.path.isdir("./compression_sets_log"):
+        os.mkdir("./compression_sets_log")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # dataset details 
-    parser.add_argument('-d', '--dataset', type=str, default="moons", help="Name of the dataset.")
+    parser.add_argument('-d', '--dataset', type=str, default="mnist", help="Name of the dataset.")
     parser.add_argument('-r', '--regression', action='store_true', help="If the dataset is a regression problem.")
     parser.add_argument('-nc', '--n_classes', type=int, default=2, help="Number of classes used in the training set.")
-    parser.add_argument('-f', '--first_class', type=int, default=-1,
+    parser.add_argument('-f', '--first_class', type=int, default=1,
                  help="When the problem is binary classification, the first class used in the training set. Use -1 for low_high problems. The second class is ignored.")
-    parser.add_argument('-s', '--second_class', type=int, default=-1, help="When the problem is binary classification, the second class used in the training set.")
+    parser.add_argument('-s', '--second_class', type=int, default=7, help="When the problem is binary classification, the second class used in the training set.")
 
     # pretraining details
     parser.add_argument('-p', '--prior_size', type=float, default=0.0, help="Portion of the training set that is used to pre-train the model.")
@@ -236,7 +243,7 @@ if __name__ == "__main__":
     parser.add_argument('-plr', '--pretraining_lr', type=float, default=1e-3, help="Learning rate used by the optimizer to pretrain the model.")
 
     # training details
-    parser.add_argument('-m', '--model_type', type=str, default="forest", help="Type of model to train.")
+    parser.add_argument('-m', '--model_type', type=str, default="mlp", help="Type of model to train.")
     parser.add_argument('-me', '--max_epochs', type=int, default=1, help="Maximum number of epochs to train the model at each step of P2L.")
     parser.add_argument('-b', '--batch_size', type=int, default=128, help="Batch size used to train the model.")
     parser.add_argument('-dp', '--dropout_probability', type=float, default=0.2, help="Dropout probability for the layers of the model.")
@@ -250,7 +257,7 @@ if __name__ == "__main__":
     parser.add_argument('--nesterov', action='store_false', help="If the SGD optimizer should use Nesterov acceleration.")
 
     # p2l params
-    parser.add_argument('-mx', '--max_compression_size', type=int, default=-1,
+    parser.add_argument('-mx', '--max_compression_size', type=int, default=1,
                      help="Maximum size of the compression set added by the P2L algorithm. -1 if everything can be added")
     parser.add_argument('-dg', '--data_groupsize', type=int, default=1, help="Number of data added to the compression set at each iterations.")
     parser.add_argument('-pt', '--patience', type=int, default=3, help="Patience of the EarlyStopping Callback used to train on the compression set.")
@@ -279,6 +286,11 @@ if __name__ == "__main__":
     parser.add_argument('--classic_bounds', action='store_true', help="Use if you do not want to compute the classic bounds.")
     parser.add_argument('--p2l_bounds', action='store_true', help="Use if you do not want to compute the P2L bounds.")
     parser.add_argument('--real_bounds', action='store_false', help="Use if you do not want to compute the real valued bounds.")
+
+    # autoencoder parameters for mmd estimation
+    parser.add_argument('--estimate_mmd', action='store_false',
+                        help="Use if you want to compute the mmd distance between the compression set and dataset.")
+    
 
     # miscellaneous
     parser.add_argument('-lg', '--log_iterations', type=int, default=1, help="Log the real valued bounds after this number of iterations.")
