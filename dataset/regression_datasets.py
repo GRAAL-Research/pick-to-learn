@@ -1,4 +1,4 @@
-from ucimlrepo import fetch_ucirepo 
+from ucimlrepo import fetch_ucirepo, DatasetNotFoundError
 from utilities.utils_datasets import CustomDataset, split_train_validation_dataset
 import torch
 import pandas as pd
@@ -12,6 +12,9 @@ def fetch_repo(id):
             break
         except ConnectionError:
             time.sleep(20)
+        except ucimlrepo.fetch.DatasetNotFoundError:
+            time.sleep(20)
+            
     return uci_dataset
 
 
