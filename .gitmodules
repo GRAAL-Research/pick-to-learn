@@ -1,0 +1,3 @@
+[submodule "ticl"]
+	path = ticl
+	url = https://github.com/microsoft/ticl

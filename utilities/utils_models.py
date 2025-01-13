@@ -91,6 +91,16 @@ def create_model(config):
                 seed=config['seed'],
                 ccp_alpha=config['ccp_alpha']
             ))
+    elif config['dataset'] in ['rice', 'wine', 'statlog']:
+        # return ClassificationModel(MnistMlp(dataset_shape=784,
+        #                                         n_classes=config['n_classes'],
+        #                                         dropout_probability=config['dropout_probability']),
+        #                                         optimizer=config['optimizer'],
+        #                                         lr=lr,
+        #                                         momentum=config['momentum'],
+        #                                         batch_size=config['batch_size']
+        #                                         )
+        ...
     
     raise NotImplementedError(f"Model type = {config['model_type']} with dataset {config['dataset']} is not implemented yet.")
 
