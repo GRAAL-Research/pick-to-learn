@@ -221,9 +221,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # dataset details 
-    parser.add_argument('-d', '--dataset', type=str, default="statlog", help="Name of the dataset.")
+    parser.add_argument('-d', '--dataset', type=str, default="mice_protein", help="Name of the dataset.")
     parser.add_argument('-r', '--regression', action='store_true', help="If the dataset is a regression problem.")
-    parser.add_argument('-nc', '--n_classes', type=int, default=2, help="Number of classes used in the training set.")
+    parser.add_argument('-nc', '--n_classes', type=int, default=8, help="Number of classes used in the training set.")
     parser.add_argument('-f', '--first_class', type=int, default=-1,
                  help="When the problem is binary classification, the first class used in the training set. Use -1 for low_high problems. The second class is ignored.")
     parser.add_argument('-s', '--second_class', type=int, default=-1, help="When the problem is binary classification, the second class used in the training set.")
@@ -236,11 +236,11 @@ if __name__ == "__main__":
     parser.add_argument('-plr', '--pretraining_lr', type=float, default=1e-3, help="Learning rate used by the optimizer to pretrain the model.")
 
     # training details
-    parser.add_argument('-m', '--model_type', type=str, default="mlp", help="Type of model to train.")
+    parser.add_argument('-m', '--model_type', type=str, default="mothernet", help="Type of model to train.")
     parser.add_argument('-me', '--max_epochs', type=int, default=1, help="Maximum number of epochs to train the model at each step of P2L.")
-    parser.add_argument('-b', '--batch_size', type=int, default=128, help="Batch size used to train the model.")
+    parser.add_argument('-b', '--batch_size', type=int, default=32, help="Batch size used to train the model.")
     parser.add_argument('-dp', '--dropout_probability', type=float, default=0.2, help="Dropout probability for the layers of the model.")
-    parser.add_argument('--early_stopping', action='store_false', help="Should the model early stop.")
+    parser.add_argument('--early_stopping', action='store_true', help="Should the model early stop.")
     parser.add_argument('-esp', '--early_stopping_patience', type=int, default=20, help="Number of iterations before early stopping.")
 
     # optimizer
@@ -252,7 +252,7 @@ if __name__ == "__main__":
     # p2l params
     parser.add_argument('-mx', '--max_compression_size', type=int, default=-1,
                      help="Maximum size of the compression set added by the P2L algorithm. -1 if everything can be added")
-    parser.add_argument('-dg', '--data_groupsize', type=int, default=1, help="Number of data added to the compression set at each iterations.")
+    parser.add_argument('-dg', '--data_groupsize', type=int, default=8, help="Number of data added to the compression set at each iterations.")
     parser.add_argument('-pt', '--patience', type=int, default=3, help="Patience of the EarlyStopping Callback used to train on the compression set.")
     parser.add_argument('--clamping', action='store_false', help="If you want to clamp the cross-entropy loss during training.")
     parser.add_argument('-pmin', '--min_probability', type=float, default=1e-5, help="Minimum probability bound for clamping.")

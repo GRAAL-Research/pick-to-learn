@@ -1,9 +1,10 @@
-from models.linear_network import MnistMlp
+from models.linear_network import MnistMlp, MotherNetMlp
 from models.convolutional_network import MnistCnn, Cifar10Cnn9l
 from models.transformer import DistilBert, ClassificationTransformerModel
 from models.classification_model import ClassificationModel
 from models.classification_tree import ClassificationTree, ClassificationForest, ClassificationTreeModel
 from models.regression_tree import RegressionTree, RegressionForest, RegressionTreeModel
+from models.mothernet_classification_model import MotherNetClassificationModel
 
 def create_model(config):
     if config.get('prior_size', 0.0) == 0.0:
@@ -91,16 +92,32 @@ def create_model(config):
                 seed=config['seed'],
                 ccp_alpha=config['ccp_alpha']
             ))
-    elif config['dataset'] in ['rice', 'wine', 'statlog']:
-        # return ClassificationModel(MnistMlp(dataset_shape=784,
-        #                                         n_classes=config['n_classes'],
-        #                                         dropout_probability=config['dropout_probability']),
-        #                                         optimizer=config['optimizer'],
-        #                                         lr=lr,
-        #                                         momentum=config['momentum'],
-        #                                         batch_size=config['batch_size']
-        #                                         )
-        ...
+    elif config['dataset'] in ['rice', 'wine', 'statlog',"breast_cancer", "image_segmentation", "travel_reviews", "mice_protein", "htru2"]:
+        if config['dataset'] == 'rice':
+            dataset_shape = 7
+        elif config['dataset'] == 'wine':
+            dataset_shape = 11
+        elif config['dataset'] == 'statlog':
+            dataset_shape = 36
+        elif config['dataset'] == 'breast_cancer':
+            dataset_shape = 30
+        elif config['dataset'] == 'image_segmentation':
+            dataset_shape = 19
+        elif config['dataset'] == 'mice_protein':
+            dataset_shape = 80
+        elif config['dataset'] == 'htru2':
+            dataset_shape = 8
+        
+        if config['model_type'] == "mothernet":
+            return MotherNetClassificationModel(MotherNetMlp(dataset_shape=dataset_shape, n_classes=config['n_classes']))
+        elif config['model_type'] == 'mlp':
+            return ClassificationModel(MotherNetMlp(dataset_shape=dataset_shape,
+                                                     n_classes=config['n_classes']),
+                                                    optimizer=config['optimizer'],
+                                                    lr=lr,
+                                                    momentum=config['momentum'],
+                                                    batch_size=config['batch_size']
+                                                     )
     
     raise NotImplementedError(f"Model type = {config['model_type']} with dataset {config['dataset']} is not implemented yet.")
 

@@ -1,7 +1,7 @@
 from dataset.mnist import load_binary_mnist, load_low_high_mnist, load_mnist, load_random_mnist
 from dataset.cifar10 import load_binary_cifar10
 from dataset.regression_datasets import load_concrete, load_parkinson, load_powerplant, load_infrared, load_airfoil
-from dataset.classification_datasets import load_rice, load_wine, load_statlog
+from dataset.classification_datasets import *
 from dataset.amazon_polarity import load_amazon_polarity
 from dataset.toys import load_moons
 
@@ -46,5 +46,13 @@ def load_dataset(config):
         return load_wine(config['test_size'])
     elif config['dataset'] == 'statlog':
         return load_statlog(config['test_size'])
+    elif config['dataset'] == 'breast_cancer':
+        return load_breast_cancer(config['test_size'])
+    elif config['dataset'] == 'image_segmentation':
+        return load_image_segmentation(config['test_size'])
+    elif config['dataset'] == 'mice_protein':
+        return load_mice_protein(config['test_size'])
+    elif config['dataset'] == 'htru2':
+        return load_htru2(config['test_size'])
     else:
         raise NotImplementedError(f"The dataset {config['dataset']} is not supported yet.")

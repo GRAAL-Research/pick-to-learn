@@ -79,7 +79,7 @@ def get_updated_batch_size(batch_size, model_type, dataset_length):
     """
     When batch_size == -1, we want to train on the whole dataset.
     """
-    if model_type in ['tree', 'forest']:
+    if model_type in ['tree', 'forest', 'mothernet']:
         return dataset_length
     return batch_size
 
