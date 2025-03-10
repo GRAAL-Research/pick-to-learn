@@ -11,15 +11,17 @@ To run the grid search, use the file `main.py`. For the baselines, use the files
 If you use our code, please cite our paper : 
 
 ```
-Bazinet, M., Zantedeschi, V., & Germain, P. (2024). Sample compression unleashed: New generalization bounds for real valued losses. arXiv preprint arXiv:2409.17932.
+Bazinet, M., Zantedeschi, V., & Germain, P. (2025). Sample compression unleashed: New generalization bounds for real valued losses. In The 28th International Conference on Artificial Intelligence and Statistics.
 ```
 
 ```
-@article{bazinet2024sample,
-  title={Sample compression unleashed: New generalization bounds for real valued losses},
-  author={Bazinet, Mathieu and Zantedeschi, Valentina and Germain, Pascal},
-  journal={arXiv preprint arXiv:2409.17932},
-  year={2024}
+@inproceedings{
+bazinet2025sample,
+title={Sample compression unleashed: New generalization bounds for real valued losses},
+author={Mathieu Bazinet and Valentina Zantedeschi and Pascal Germain},
+booktitle={The 28th International Conference on Artificial Intelligence and Statistics},
+year={2025},
+url={https://openreview.net/forum?id=0ynSy2dwNi}
 }
 ```
 
