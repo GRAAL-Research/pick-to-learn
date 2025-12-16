@@ -25,4 +25,7 @@ url={https://openreview.net/forum?id=0ynSy2dwNi}
 }
 ```
 
+---- 
+#### Erratum on December 16th, 2025
 
+There was a small mistake in the code for the Pick-To-Learn bound, which led to slightly tighter bounds than expected in the paper. For future use, this problem is now resolved. 

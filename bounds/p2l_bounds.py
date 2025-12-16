@@ -10,7 +10,7 @@ def p2l_bound(k, n, delta):
     while t2 - t1 > 1e-10:
         t = (t1 + t2) / 2
 
-        left = (delta / 2 - delta / 6) + betainc(k+1, n-k, t)
+        left = (delta / 2 - delta / 6) * betainc(k+1, n-k, t)
         left += (delta / 6 ) * betainc(k+1, 4*n+1-k, t)
         right = (1+delta / 6 /n) * t * n * (betainc(k, n-k+1, t) - betainc(k+1, n-k, t))
         if left > right:
